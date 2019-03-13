@@ -5,7 +5,6 @@
 
 int Routers_Vector_SIZE;
 
-
 ////////////////////////////
 ////////////////////////////
 
@@ -53,35 +52,49 @@ void printList(node head)
 ////////////////////////////
 ////////////////////////////
 
-void readInput(node head, int *num_routers, int *num_connections)
+node readInput(node head, int *num_routers, int *num_connections)
 {
-    int num1,num2,num3,num4;
-    scanf("%d %d",&num_routers,&num_connections);
+    int num1, num2;
+    scanf("%d %d", num_routers, num_connections);
+    for (int i = 0; i < *num_connections; i++)
+    {
+        scanf("%d %d", &num1, &num2);
 
+        if (head == NULL)
+        {
+            head = NEW();
+            head->nums[0] = num1;
+            head->nums[1] = num2;
+        }
+        else
+            head = insertBegin(head, num1, num2);
+    }
+    return head;
+}
 
-void searchSubNetwork(int num_routers){
-
+void searchSubNetwork(int num_routers)
+{
+    
 }
 
 int main()
 {
-    int size = 50,*vector,*Routers_Vector;
+    int size = 50, *vector, *Routers_Vector;
     int num_routers, num_connections;
     node head = NULL;
-    readInput(head, &num_routers, &num_connections);
-    
-    Routers_Vector_SIZE=num_routers;
-    Routers_Vector=malloc(sizeof(int)*num_routers);
-    for(int i=1;i<=num_routers;i++)
-        Routers_Vector[i-1]=i;
-    
-    int router_num=1;
-    while(router_num<=num_routers)
-        
+    head=readInput(head, &num_routers, &num_connections);
+    printList(head);
+    Routers_Vector_SIZE = num_routers;
+    Routers_Vector = malloc(sizeof(int) * num_routers);
 
-    return 0;
+    for (int i = 1; i <= num_routers; i++)
+        Routers_Vector[i - 1] = i;
+
+    int router_num = 1;
+    while (router_num <= num_routers)
+
+        return 0;
 }
-
 
 /*
 
