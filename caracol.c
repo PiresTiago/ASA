@@ -1,35 +1,49 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 //VAR GLOBAIS
 
 int Routers_Vector_SIZE;
-
+int stack_index = 0, subnet_index = 0, grafo_index = 0;
+int cnt_finish = 0;
+bool firstTime = true;
+bool FLAG_CRUZAMENTO = false;
 ////////////////////////////
 ////////////////////////////
 
 //LIST//
+typedef struct node
+{
+    int num;
+    struct node *next;
+} * node;
+
+typedef struct list
+{
+    node head, tail;
+} * ListPos;
 
 typedef struct connection
 {
     int nums[2];
-    struct connection *next;
-} * node;
+    bool visited;
+} * connection;
 
 node NEW()
 {
-    node x = (node)malloc(sizeof(struct connection));
+
+    node x = (node)malloc(sizeof(struct node));
     x->next = NULL;
     return x;
 }
 
-node insertBegin(node head, int num1, int num2)
+node insertEnd(node tail, int num1)
 {
-
     node x = NEW();
-    x->next = head;
-    x->nums[0] = num1;
-    x->nums[1] = num2;
+    tail->next = x;
+    x->next = NULL;
+    x->num = num1;
     return x;
 }
 
@@ -37,7 +51,7 @@ node lookup(node head, int num)
 {
     node t;
     for (t = head; t != NULL; t = t->next)
-        if (t->nums[0] == num)
+        if (t->num == num)
             return t;
     return NULL;
 }
@@ -46,108 +60,167 @@ void printList(node head)
 {
     node t;
     for (t = head; t != NULL; t = t->next)
-        printf("%d %d\n", t->nums[0], t->nums[1]);
+        printf("%d\n", t->num);
 }
 
 ////////////////////////////
 ////////////////////////////
 
-node readInput(node head, int *num_routers, int *num_connections)
+void readInput(connection *routerConnections, int *num_routers, int *num_connections)
 {
-    int num1, num2;
-    scanf("%d %d", num_routers, num_connections);
-    for (int i = 0; i < *num_connections; i++)
-    {
-        scanf("%d %d", &num1, &num2);
+    scanf("%d", num_routers);
+    scanf("%d", num_connections);
+    *routerConnections = malloc(sizeof(struct connection) * (*num_connections));
 
-        if (head == NULL)
-        {
-            head = NEW();
-            head->nums[0] = num1;
-            head->nums[1] = num2;
-        }
-        else
-            head = insertBegin(head, num1, num2);
-    }
-    return head;
+    for (int i = 0; i < *num_connections; i++)
+        scanf("%d %d", &routerConnections[i]->nums[0], &routerConnections[i]->nums[1]);
+    printf("SIM\n");
 }
 
 void searchSubNetwork(int num_routers)
 {
-    
 }
 
 int main()
 {
-    int size = 50, *vector, *Routers_Vector;
-    int num_routers, num_connections;
-    node head = NULL;
-    head=readInput(head, &num_routers, &num_connections);
-    printList(head);
-    Routers_Vector_SIZE = num_routers;
-    Routers_Vector = malloc(sizeof(int) * num_routers);
+    int *graph, subnetwork_id = 0;
 
-    for (int i = 1; i <= num_routers; i++)
-        Routers_Vector[i - 1] = i;
+    connection *routerConnections;
 
-    int router_num = 1;
-    while (router_num <= num_routers)
+    int num_subnetworks = 1, num_crossRouters = 0;
+    int num_routers, num_connections, max_router_subnet = 0, tmp_router_subnet = 0;
+    ListPos stackPos = NULL, subnetworks_idsPos = NULL;
+    node stack = NULL, subnetworks_ids = NULL;
+    readInput(routerConnections, &num_routers, &num_connections);
+    int visit[num_routers];
 
-        return 0;
-}
+    stack = NEW();
+    stackPos->head = stack;
+    stackPos->tail = stack;
 
-/*
+    subnetworks_ids = NEW();
+    subnetworks_idsPos->head = subnetworks_ids;
+    subnetworks_idsPos->tail = subnetworks_ids;
 
-void clearBuffer()
-{
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
-
-void readInput(node head, int *num_routers, int *num_connections)
-{
-    char space, newline;
-    int cnt = 0, num1, num2;
-
-    scanf("%d", num_routers);
-    scanf("%d", num_connections);
-
-    if (*num_routers < 2 || *num_connections < 1)
+    for (int i = 0; i < num_routers; i++)
     {
-        printf("Input error\n");
-        exit(EXIT_FAILURE);
+        node teste = NEW();
+        stackPos->tail->next = teste;
+        stackPos->tail = teste;
+        teste->num = i;
     }
-    clearBuffer();
-    for (int i = 0; i < *num_connections; i++)
+
+    printList(stackPos->head);
+
+    return 0;
+}
+
+/*   stack = malloc(sizeof(int) * num_routers);
+    visit = malloc(sizeof(int) * num_routers);
+    grafo = malloc(sizeof(int) * num_routers);
+    subnetworks_ids = malloc(sizeof(int) * num_routers);
+
+    stack[stack_index] = head->nums[0]; //STACK INIT
+
+    for (int i = 0; i < num_routers; i++)
     {
+        visit[i] = i + 1;
+        subnetworks_ids[i] = 0;
+        grafo[i] = 0;
+    }
 
-        num1 = getchar();
-        space = getchar();
-        num2 = getchar();
-        newline = getchar();
+    while (grafo[grafo_index - 1] < num_routers)
+    {
+        if (cnt_finish == num_connections)
+            break; //Compara nº de visited com nº de conexoes
 
-        num1 -= 48;
-        num2 -= 48;
-
-        if (num1 < 0 || num1 > 9 || num1 > *num_routers ||
-            num2 < 0 || num2 > 9 || num2 > *num_routers ||
-            space != 32 || newline != 10)
+        for (t = head; t != NULL; t = t->next)
         {
-            printf("Input error, try again.\n");
-            i--;
+
+            //printf("STACK: %d \n",stack[stack_index]);
+            //printf("VISIT: %d \n",visit[t->nums[0]-1]);
+            //printf("GRAFO %d\n",grafo[grafo_index-1]);
+            if (t->visited == false &&
+                (stack[stack_index] == t->nums[0] || stack[stack_index] == t->nums[1]))
+            {
+                //printf("ENTROU\n");
+                t->visited == true;
+                if (visit[t->nums[0] - 1] == t->nums[0])
+                {
+                    if (FLAG_CRUZAMENTO)
+                    {
+                        if (max_router_subnet < tmp_router_subnet)
+                        {
+                            max_router_subnet = tmp_router_subnet-1;
+                            tmp_router_subnet = 0;
+                        }
+                        FLAG_CRUZAMENTO = false;
+                        num_crossRouters++;
+                    }                           //VERIFICA SE VERTICE É BRANCO
+                    visit[t->nums[0] - 1] = -1; //MARCA VERTICE COMO DESCOBERTO
+                    grafo[grafo_index++] = t->nums[0];
+                    tmp_router_subnet++;
+                    if (firstTime)
+                    {
+                        stack[stack_index] = t->nums[0];
+                        firstTime = false;
+                    }
+                    else
+                        stack[++stack_index] = t->nums[0];
+                }
+                if (visit[t->nums[1] - 1] == t->nums[1])
+                {
+                    if (FLAG_CRUZAMENTO)
+                    {
+                        if (max_router_subnet < tmp_router_subnet)
+                        {
+                            max_router_subnet = tmp_router_subnet-1;
+                            tmp_router_subnet = 0;
+                        }
+                        FLAG_CRUZAMENTO = false;
+                        num_crossRouters++;
+                    }
+                    visit[t->nums[1] - 1] = -1;
+                    grafo[grafo_index++] = t->nums[1];
+                    tmp_router_subnet++;
+                    stack[++stack_index] = t->nums[1];
+                }
+
+                if (grafo[grafo_index - 1] > subnetwork_id)
+                {
+                    subnetwork_id = grafo[grafo_index - 1];
+
+                    //printf("GRAFO %d\n",subnetwork_id);
+                }
+            }
+        }
+
+        if (stack_index == 0)
+        {
+            num_subnetworks++;
+            subnetworks_ids[subnet_index++] = subnetwork_id;
+            subnetwork_id = 0;
+            FLAG_CRUZAMENTO = true;
             continue;
         }
-        if (head == NULL)
+        else if (grafo[grafo_index - 1] == num_routers)
         {
-            head = NEW();
-            head->nums[0] = num1;
-            head->nums[1] = num2;
+            subnetworks_ids[subnet_index++] = subnetwork_id;
+            //printf("SUB %d\n",subnetworks_ids[0]);
+            break;
         }
-        else
-            head = insertBegin(head, num1, num2);
-
-        //printf("\n");
-        //printList(head);
-        //printf("\n");
+        stack_index -= 1;
+        FLAG_CRUZAMENTO = true;
     }
+
+    printf("%d\n", num_subnetworks);
+    for (int x = 0; subnetworks_ids[x] != 0; x++)
+    {
+
+        printf("%d", subnetworks_ids[x]);
+    }
+    printf("\n");
+    printf("%d\n", num_crossRouters);
+    printf("%d\n", max_router_subnet);
+    return 0;
 }*/
