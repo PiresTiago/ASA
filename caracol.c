@@ -28,7 +28,14 @@ typedef struct connection
 {
     int nums[2];
     bool visited;
+    struct connection *next;
 } * connection;
+
+
+typedef struct listconnection
+{
+    connection head, tail;
+} *ConnectionPos;
 
 node NEW()
 {
@@ -36,6 +43,22 @@ node NEW()
     node x = (node)malloc(sizeof(struct node));
     x->next = NULL;
     return x;
+}
+
+connection NewConnection(ConnectionPos pos)
+{
+    connection c = (connection)malloc(sizeof(struct connection));
+    c->next = NULL;
+    c->nums[0] = 0;
+    c->nums[1] = 0;
+    
+    if (pos->head == NULL)
+    {
+        pos->head = c;
+        pos->tail = c;
+    }
+    
+    return c;
 }
 
 node insertEnd(node tail, int num1)
@@ -66,15 +89,24 @@ void printList(node head)
 ////////////////////////////
 ////////////////////////////
 
-void readInput(connection *routerConnections, int *num_routers, int *num_connections)
+void readInput(connection routerConnections, ConnectionPos pos, int *num_routers, int *num_connections)
 {
     scanf("%d", num_routers);
     scanf("%d", num_connections);
-    *routerConnections = malloc(sizeof(struct connection) * (*num_connections));
+    routerConnections = (connection)malloc(sizeof(struct connection) * (*num_connections));
+    
+    int num1, num2;
 
     for (int i = 0; i < *num_connections; i++)
-        scanf("%d %d", &routerConnections[i]->nums[0], &routerConnections[i]->nums[1]);
-    printf("SIM\n");
+    {
+        fscanf(stdin, "%d %d", &num1, &num2);
+        connection c = NewConnection(pos);
+        c->nums[0] = num1;
+        c->nums[1] = num2;
+        pos->tail->next = c;
+        pos->tail = c;
+    }
+        
 }
 
 void searchSubNetwork(int num_routers)
@@ -85,14 +117,18 @@ int main()
 {
     int *graph, subnetwork_id = 0;
 
-    connection *routerConnections;
+    connection routerConnections;
 
     int num_subnetworks = 1, num_crossRouters = 0;
-    int num_routers, num_connections, max_router_subnet = 0, tmp_router_subnet = 0;
-    ListPos stackPos = NULL, subnetworks_idsPos = NULL;
+    int num_routers, num_connections, max_router_subnet = 0, tmp_router_subnet = 0;;
     node stack = NULL, subnetworks_ids = NULL;
-    readInput(routerConnections, &num_routers, &num_connections);
+    ConnectionPos connectionsPos = (ConnectionPos)malloc(sizeof(struct list));
+    ListPos stackPos = (ListPos)malloc(sizeof(struct list));
+    ListPos subnetworks_idsPos = (ListPos)malloc(sizeof(struct list));
+    
+    readInput(routerConnections, connectionsPos, &num_routers, &num_connections);
     int visit[num_routers];
+    
 
     stack = NEW();
     stackPos->head = stack;
