@@ -8,48 +8,49 @@ typedef struct node
     struct node *next;
 } * node_t;
 
-/*typedef struct list
+typedef struct list
 {
     node_t head, tail;
-} * list_t;*/
-
-typedef struct connection
-{
-    int nums[2];
-    bool visited;
-} connection_t;
+    bool router_visited, all_visited;
+} * list_t;
 
 //VAR GLOBAIS
-
+bool subnet_found = true;
 ////////////////////////////
 
 //LIST//
 
 node_t NEW(int number)
 {
-    node_t x = (node_t) malloc(sizeof(struct node));
+    node_t x = (node_t)malloc(sizeof(struct node));
     x->num = number;
     x->next = NULL;
     return x;
 }
 
-/*node_t insertEnd(node_t tail, int num1)
+void addtoSubNetList(node_t *head, int number)
 {
-    node_t x = NEW();
-    tail->next = x;
-    x->next = NULL;
-    x->num = num1;
-    return x;
-}*/
+    if (*head == NULL)
+    {
+        *head = malloc(sizeof(struct node));
+        (*head)->num = number;
+        (*head)->next = NULL;
+    }
+    else
+    {
+        node_t x = NEW(number);
+        x->next = *head;
+        *head = x;
+    }
+}
 
-/*node_t lookup(node_t head, int num)
+void addtoList(list_t *list, int number)
 {
-    node_t t;
-    for (t = head; t != NULL; t = t->next)
-        if (t->num == num)
-            return t;
-    return NULL;
-}*/
+    node_t x = NEW(number);
+    x->next = (*list)->head;
+    (*list)->head = x;
+    (*list)->tail = (*list)->head;
+}
 
 void printList(node_t head)
 {
@@ -57,76 +58,124 @@ void printList(node_t head)
     for (t = head; t != NULL; t = t->next)
         printf("%d\n", t->num);
 }
-
 ////////////////////////////
 ////////////////////////////
-
-void pushStack(node_t *stack,int number)
-{
-        node_t x = NEW(number);
-        x->next=*stack;
-        *stack = x;
-}
-
-
-void popStack(node_t *stack)
-{
-    if (*stack == NULL){
-        printf("Error on pop, Stack empty, exiting...\n");
-        exit(EXIT_FAILURE);
-    }
-    node_t x = *stack;
-    *stack = (*stack)->next;
-    free(x);
-}
 
 int main()
 {
-    int subnetwork_id = 0, num_subnetworks = 1, num_crossRouters = 0,
-        num_routers, num_connections, max_router_subnet = 0, tmp_router_subnet = 0;
-
-    node_t stack = NULL, subnetworks_ids = NULL;
+    int subnetwork_id = 0, num_subnetworks = 0, num_crossRouters = 0,
+        num_routers, num_visited_routers = 0, num_connections,
+        max_router_subnet = 0, tmp_router_subnet = 0;
 
     //Read Input
+    int num1, num2;
+
     scanf("%d", &num_routers);
     scanf("%d", &num_connections);
 
-    int visit[num_routers], graph[num_routers];
-    connection_t routerConnections[num_connections];
+    list_t listOfAdj[num_routers];
+    node_t subnetworks_ids = NULL;
+
+    for (int i = 0; i < num_routers; i++)
+    {
+        listOfAdj[i] = malloc(sizeof(struct list));
+        listOfAdj[i]->head = malloc(sizeof(struct node));
+        listOfAdj[i]->tail = malloc(sizeof(struct node));
+        listOfAdj[i]->head->next = NULL;
+        listOfAdj[i]->tail->next = NULL;
+        listOfAdj[i]->all_visited = false;
+        listOfAdj[i]->router_visited = false;
+    }
 
     for (int i = 0; i < num_connections; i++)
-        scanf("%d %d", &(routerConnections[i]).nums[0], &(routerConnections[i]).nums[1]);
+    {
+        scanf("%d %d", &num1, &num2);
+        addtoList(&listOfAdj[num1 - 1], num2);
+        addtoList(&listOfAdj[num2 - 1], num1);
+    }
     //-----
 
-    for (int i = 0; i < num_routers; i++) //preenche array VISIT
+    // IMPRIME LISTA DE ADJACENCIAS
+    for (int i = 0; i < num_routers; i++) 
     {
-        visit[i] = i + 1;
+        printf("%d", i + 1);
+        for (node_t j = listOfAdj[i]->head; j->next != NULL; j = j->next)
+        {
+            printf("->%d", j->num);
+        }
+        printf("\n");
     }
+    printf("\n");
 
-    subnetworks_ids = malloc(sizeof(struct node));
-    //pushStack(&stack,1);
-    //popStack(&stack);
- 
-    return 0;
-
-    for (int i = 0; graph[num_routers - 1] == 0; i++)
+    int i = 0;
+    while (true)
     {
 
-        if (visit[i] != i + 1)
+        if (num_visited_routers == num_routers)
+            break;
+
+        if (listOfAdj[i]->all_visited == true)
+        {
+            i++;
             continue;
-        visit[i] = -1;
-        graph[i] = i + 1;
-        pushStack(&stack,i+1);
+        }
+
+        if (listOfAdj[i]->router_visited == false)
+        {
+            if (i + 1 > subnetwork_id)
+                subnetwork_id = i + 1;
+            listOfAdj[i]->router_visited = true;
+            num_visited_routers++;
+            //printf("%d\n",num_visited_routers);
+        }
+        for (node_t x = listOfAdj[i]->head; x->next != NULL; x = x->next)
+        { //começa no ultimo elemento visitado
+            //printf("%d\n", i + 1);
+            
+            if (x->next == NULL && listOfAdj[x->num - 1]->router_visited == false)
+            { //ultimo elemento da lista e nao foi visitado
+                listOfAdj[i]->all_visited = true;
+                i = x->num - 1;
+                break;
+            }
+
+            else if (x->next == NULL && listOfAdj[x->num - 1]->router_visited == true)
+            { //ultimo elemento da lista e ja foi visitado
+                listOfAdj[i]->all_visited = true;
+
+                for (node_t y = listOfAdj[i]->head; y->next != NULL; y = y->next)
+                    if (listOfAdj[y->num - 1]->all_visited == false)
+                    {
+                        subnet_found = false;
+                        i = y->num - 1;
+                        break;
+                    }
+                if (subnet_found)
+                {
+
+                    num_subnetworks++;
+                    addtoSubNetList(&subnetworks_ids, subnetwork_id);
+                    subnetwork_id = 0;
+                }
+                subnet_found = true;
+                break;
+            }
+
+            else if (listOfAdj[x->num - 1]->router_visited == false)
+            {
+                listOfAdj[i]->tail = x;
+                i = x->num - 1;
+                break;
+            }
+        }
     }
-
-
-    /*for (int i = 0; i < num_routers; i++)
+    addtoSubNetList(&subnetworks_ids, subnetwork_id);
+    printf("%d\n", num_subnetworks);
+    for (node_t x = subnetworks_ids; x->next != NULL; x = x->next)
     {
-        
+        printf("OLA\n");
+        printf("%d", subnetworks_ids->num);
     }
-
-    printList(stack->head);*/
-
     return 0;
 }
 
