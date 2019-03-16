@@ -2,86 +2,58 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-//VAR GLOBAIS
-
-int Routers_Vector_SIZE;
-int stack_index = 0, subnet_index = 0, grafo_index = 0;
-int cnt_finish = 0;
-bool firstTime = true;
-bool FLAG_CRUZAMENTO = false;
-////////////////////////////
-////////////////////////////
-
-//LIST//
 typedef struct node
 {
     int num;
     struct node *next;
-} * node;
+} * node_t;
 
-typedef struct list
+/*typedef struct list
 {
-    node head, tail;
-} * ListPos;
+    node_t head, tail;
+} * list_t;*/
 
 typedef struct connection
 {
     int nums[2];
     bool visited;
-    struct connection *next;
-} * connection;
+} connection_t;
 
+//VAR GLOBAIS
 
-typedef struct listconnection
+////////////////////////////
+
+//LIST//
+
+node_t NEW(int number)
 {
-    connection head, tail;
-} *ConnectionPos;
-
-node NEW()
-{
-
-    node x = (node)malloc(sizeof(struct node));
+    node_t x = (node_t) malloc(sizeof(struct node));
+    x->num = number;
     x->next = NULL;
     return x;
 }
 
-connection NewConnection(ConnectionPos pos)
+/*node_t insertEnd(node_t tail, int num1)
 {
-    connection c = (connection)malloc(sizeof(struct connection));
-    c->next = NULL;
-    c->nums[0] = 0;
-    c->nums[1] = 0;
-    
-    if (pos->head == NULL)
-    {
-        pos->head = c;
-        pos->tail = c;
-    }
-    
-    return c;
-}
-
-node insertEnd(node tail, int num1)
-{
-    node x = NEW();
+    node_t x = NEW();
     tail->next = x;
     x->next = NULL;
     x->num = num1;
     return x;
-}
+}*/
 
-node lookup(node head, int num)
+/*node_t lookup(node_t head, int num)
 {
-    node t;
+    node_t t;
     for (t = head; t != NULL; t = t->next)
         if (t->num == num)
             return t;
     return NULL;
-}
+}*/
 
-void printList(node head)
+void printList(node_t head)
 {
-    node t;
+    node_t t;
     for (t = head; t != NULL; t = t->next)
         printf("%d\n", t->num);
 }
@@ -89,64 +61,70 @@ void printList(node head)
 ////////////////////////////
 ////////////////////////////
 
-void readInput(connection routerConnections, ConnectionPos pos, int *num_routers, int *num_connections)
+void pushStack(node_t *stack,int number)
 {
-    scanf("%d", num_routers);
-    scanf("%d", num_connections);
-    routerConnections = (connection)malloc(sizeof(struct connection) * (*num_connections));
-    
-    int num1, num2;
-
-    for (int i = 0; i < *num_connections; i++)
-    {
-        fscanf(stdin, "%d %d", &num1, &num2);
-        connection c = NewConnection(pos);
-        c->nums[0] = num1;
-        c->nums[1] = num2;
-        pos->tail->next = c;
-        pos->tail = c;
-    }
-        
+        node_t x = NEW(number);
+        x->next=*stack;
+        *stack = x;
 }
 
-void searchSubNetwork(int num_routers)
+
+void popStack(node_t *stack)
 {
+    if (*stack == NULL){
+        printf("Error on pop, Stack empty, exiting...\n");
+        exit(EXIT_FAILURE);
+    }
+    node_t x = *stack;
+    *stack = (*stack)->next;
+    free(x);
 }
 
 int main()
 {
-    int *graph, subnetwork_id = 0;
+    int subnetwork_id = 0, num_subnetworks = 1, num_crossRouters = 0,
+        num_routers, num_connections, max_router_subnet = 0, tmp_router_subnet = 0;
 
-    connection routerConnections;
+    node_t stack = NULL, subnetworks_ids = NULL;
 
-    int num_subnetworks = 1, num_crossRouters = 0;
-    int num_routers, num_connections, max_router_subnet = 0, tmp_router_subnet = 0;;
-    node stack = NULL, subnetworks_ids = NULL;
-    ConnectionPos connectionsPos = (ConnectionPos)malloc(sizeof(struct list));
-    ListPos stackPos = (ListPos)malloc(sizeof(struct list));
-    ListPos subnetworks_idsPos = (ListPos)malloc(sizeof(struct list));
-    
-    readInput(routerConnections, connectionsPos, &num_routers, &num_connections);
-    int visit[num_routers];
-    
+    //Read Input
+    scanf("%d", &num_routers);
+    scanf("%d", &num_connections);
 
-    stack = NEW();
-    stackPos->head = stack;
-    stackPos->tail = stack;
+    int visit[num_routers], graph[num_routers];
+    connection_t routerConnections[num_connections];
 
-    subnetworks_ids = NEW();
-    subnetworks_idsPos->head = subnetworks_ids;
-    subnetworks_idsPos->tail = subnetworks_ids;
+    for (int i = 0; i < num_connections; i++)
+        scanf("%d %d", &(routerConnections[i]).nums[0], &(routerConnections[i]).nums[1]);
+    //-----
 
-    for (int i = 0; i < num_routers; i++)
+    for (int i = 0; i < num_routers; i++) //preenche array VISIT
     {
-        node teste = NEW();
-        stackPos->tail->next = teste;
-        stackPos->tail = teste;
-        teste->num = i;
+        visit[i] = i + 1;
     }
 
-    printList(stackPos->head);
+    subnetworks_ids = malloc(sizeof(struct node));
+    //pushStack(&stack,1);
+    //popStack(&stack);
+ 
+    return 0;
+
+    for (int i = 0; graph[num_routers - 1] == 0; i++)
+    {
+
+        if (visit[i] != i + 1)
+            continue;
+        visit[i] = -1;
+        graph[i] = i + 1;
+        pushStack(&stack,i+1);
+    }
+
+    /*for (int i = 0; i < num_routers; i++)
+    {
+        
+    }
+
+    printList(stack->head);*/
 
     return 0;
 }
