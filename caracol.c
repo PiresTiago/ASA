@@ -10,6 +10,7 @@ typedef struct node
 
 typedef struct list
 {
+    int discovery, low;
     node_t head, tail;
     bool router_visited, all_visited;
 } * list_t;
@@ -28,8 +29,10 @@ node_t NEW(int number)
     return x;
 }
 
-void addtoSubNetList(node_t *head, int number)
+//adds element to list in ascending order
+void addtoSubNetIDList(node_t *head, int number)
 {
+
     if (*head == NULL)
     {
         *head = malloc(sizeof(struct node));
@@ -39,8 +42,22 @@ void addtoSubNetList(node_t *head, int number)
     else
     {
         node_t x = NEW(number);
-        x->next = *head;
-        *head = x;
+
+        if (number < (*head)->num)
+        {
+            x->next = *head;
+            *head = x;
+        }
+
+        node_t tmp, prev;
+        tmp = *head;
+        while (tmp != NULL && tmp->num <= number)
+        {
+            prev = tmp;
+            tmp = tmp->next;
+        }
+        x->next = tmp;
+        prev->next = x;
     }
 }
 
@@ -63,9 +80,9 @@ void printList(node_t head)
 
 int main()
 {
-    int subnetwork_id = 0, num_subnetworks = 0, num_crossRouters = 0,
+    int subnetwork_id = 0, num_subnetworks = 0, articulationPoints = 0,
         num_routers, num_visited_routers = 0, num_connections,
-        max_router_subnet = 0, tmp_router_subnet = 0;
+        discovery_time = 1;
 
     //Read Input
     int num1, num2;
@@ -81,10 +98,11 @@ int main()
         listOfAdj[i] = malloc(sizeof(struct list));
         listOfAdj[i]->head = malloc(sizeof(struct node));
         listOfAdj[i]->tail = malloc(sizeof(struct node));
-        listOfAdj[i]->head->next = NULL;
-        listOfAdj[i]->tail->next = NULL;
+        listOfAdj[i]->head = NULL;
+        listOfAdj[i]->tail = NULL;
         listOfAdj[i]->all_visited = false;
         listOfAdj[i]->router_visited = false;
+        listOfAdj[i]->low = 0;
     }
 
     for (int i = 0; i < num_connections; i++)
@@ -96,22 +114,25 @@ int main()
     //-----
 
     // IMPRIME LISTA DE ADJACENCIAS
-    for (int i = 0; i < num_routers; i++) 
+    /*for (int i = 0; i < num_routers; i++)
     {
         printf("%d", i + 1);
-        for (node_t j = listOfAdj[i]->head; j->next != NULL; j = j->next)
+        for (node_t j = listOfAdj[i]->head; j != NULL; j = j->next)
         {
             printf("->%d", j->num);
         }
         printf("\n");
     }
-    printf("\n");
+    printf("\n");*/
 
     int i = 0;
     while (true)
     {
+        // for (int i = 0; i < num_routers; i++)
+        //   printf("%d-ALL VISIT %d \n", i + 1, listOfAdj[i]->all_visited);
+        //printf("\n");
 
-        if (num_visited_routers == num_routers)
+        if (num_visited_routers >= num_routers)
             break;
 
         if (listOfAdj[i]->all_visited == true)
@@ -125,37 +146,67 @@ int main()
             if (i + 1 > subnetwork_id)
                 subnetwork_id = i + 1;
             listOfAdj[i]->router_visited = true;
-            num_visited_routers++;
+            listOfAdj[i]->discovery = discovery_time++;
+
             //printf("%d\n",num_visited_routers);
         }
-        for (node_t x = listOfAdj[i]->head; x->next != NULL; x = x->next)
+        for (node_t x = listOfAdj[i]->tail; x != NULL; x = x->next)
         { //começa no ultimo elemento visitado
-            //printf("%d\n", i + 1);
-            
+
+
             if (x->next == NULL && listOfAdj[x->num - 1]->router_visited == false)
             { //ultimo elemento da lista e nao foi visitado
+
+                //printf("%d- VEM DE %d\n", l++, i + 1);
                 listOfAdj[i]->all_visited = true;
+                num_visited_routers++;
                 i = x->num - 1;
+                //printf("VAI PARA %d\n", i + 1);
+                //printf("\n");
                 break;
             }
 
             else if (x->next == NULL && listOfAdj[x->num - 1]->router_visited == true)
             { //ultimo elemento da lista e ja foi visitado
                 listOfAdj[i]->all_visited = true;
+                num_visited_routers++;
 
-                for (node_t y = listOfAdj[i]->head; y->next != NULL; y = y->next)
+                if (listOfAdj[i]->low == 0)
+                    listOfAdj[i]->low = listOfAdj[x->num - 1]->discovery;
+                else if (listOfAdj[x->num - 1]->discovery < listOfAdj[i]->low)
+                    listOfAdj[i]->low = listOfAdj[x->num - 1]->discovery;
+
+                for (node_t y = listOfAdj[i]->head; y != NULL; y = y->next)
                     if (listOfAdj[y->num - 1]->all_visited == false)
                     {
+                        //printf("ULTIMO:%d\n", num_visited_routers);
+                        //printf("%d- VEM DE %d\n", l++, i + 1);
                         subnet_found = false;
                         i = y->num - 1;
+                        // printf("VAI PARA %d\n", i + 1);
+                        // printf("\n");
                         break;
                     }
+
                 if (subnet_found)
                 {
-
+                    //printf("ENTROU\n");
+                    //printf("%d- VEM DE %d\n", l++, i + 1);
                     num_subnetworks++;
-                    addtoSubNetList(&subnetworks_ids, subnetwork_id);
+                    addtoSubNetIDList(&subnetworks_ids, subnetwork_id);
+
                     subnetwork_id = 0;
+                    //printf("VAI PARA %d\n", i + 1);
+                    //printf("\n");
+                    //printf("visited routers:%d\n", num_visited_routers);
+                    if (num_visited_routers < num_routers)
+                    {
+                        for (i = 0; i < num_routers; i++)
+                        {
+                            if (listOfAdj[i]->router_visited == false)
+                                break;
+                        }
+                    }
                 }
                 subnet_found = true;
                 break;
@@ -163,128 +214,41 @@ int main()
 
             else if (listOfAdj[x->num - 1]->router_visited == false)
             {
+                //printf("%d\n", i + 1);
                 listOfAdj[i]->tail = x;
+                // printf("%d- VEM DE %d\n", l++, i + 1);
                 i = x->num - 1;
+                //printf("VAI PARA %d\n", i + 1);
+                //printf("\n");
                 break;
             }
+            //router ja visitado
+            if (listOfAdj[i]->low == 0)
+                listOfAdj[i]->low = listOfAdj[x->num - 1]->discovery;
+            else if (listOfAdj[x->num - 1]->discovery < listOfAdj[i]->low)
+                listOfAdj[i]->low = listOfAdj[x->num - 1]->discovery;
         }
     }
-    addtoSubNetList(&subnetworks_ids, subnetwork_id);
-    printf("%d\n", num_subnetworks);
-    for (node_t x = subnetworks_ids; x->next != NULL; x = x->next)
-    {
-        printf("OLA\n");
-        printf("%d", subnetworks_ids->num);
-    }
-    return 0;
-}
 
-/*   stack = malloc(sizeof(int) * num_routers);
-    visit = malloc(sizeof(int) * num_routers);
-    grafo = malloc(sizeof(int) * num_routers);
-    subnetworks_ids = malloc(sizeof(int) * num_routers);
-
-    stack[stack_index] = head->nums[0]; //STACK INIT
-
+    
+    /*printf("Discovery\n");
     for (int i = 0; i < num_routers; i++)
     {
-        visit[i] = i + 1;
-        subnetworks_ids[i] = 0;
-        grafo[i] = 0;
-    }
-
-    while (grafo[grafo_index - 1] < num_routers)
-    {
-        if (cnt_finish == num_connections)
-            break; //Compara nº de visited com nº de conexoes
-
-        for (t = head; t != NULL; t = t->next)
-        {
-
-            //printf("STACK: %d \n",stack[stack_index]);
-            //printf("VISIT: %d \n",visit[t->nums[0]-1]);
-            //printf("GRAFO %d\n",grafo[grafo_index-1]);
-            if (t->visited == false &&
-                (stack[stack_index] == t->nums[0] || stack[stack_index] == t->nums[1]))
-            {
-                //printf("ENTROU\n");
-                t->visited == true;
-                if (visit[t->nums[0] - 1] == t->nums[0])
-                {
-                    if (FLAG_CRUZAMENTO)
-                    {
-                        if (max_router_subnet < tmp_router_subnet)
-                        {
-                            max_router_subnet = tmp_router_subnet-1;
-                            tmp_router_subnet = 0;
-                        }
-                        FLAG_CRUZAMENTO = false;
-                        num_crossRouters++;
-                    }                           //VERIFICA SE VERTICE É BRANCO
-                    visit[t->nums[0] - 1] = -1; //MARCA VERTICE COMO DESCOBERTO
-                    grafo[grafo_index++] = t->nums[0];
-                    tmp_router_subnet++;
-                    if (firstTime)
-                    {
-                        stack[stack_index] = t->nums[0];
-                        firstTime = false;
-                    }
-                    else
-                        stack[++stack_index] = t->nums[0];
-                }
-                if (visit[t->nums[1] - 1] == t->nums[1])
-                {
-                    if (FLAG_CRUZAMENTO)
-                    {
-                        if (max_router_subnet < tmp_router_subnet)
-                        {
-                            max_router_subnet = tmp_router_subnet-1;
-                            tmp_router_subnet = 0;
-                        }
-                        FLAG_CRUZAMENTO = false;
-                        num_crossRouters++;
-                    }
-                    visit[t->nums[1] - 1] = -1;
-                    grafo[grafo_index++] = t->nums[1];
-                    tmp_router_subnet++;
-                    stack[++stack_index] = t->nums[1];
-                }
-
-                if (grafo[grafo_index - 1] > subnetwork_id)
-                {
-                    subnetwork_id = grafo[grafo_index - 1];
-
-                    //printf("GRAFO %d\n",subnetwork_id);
-                }
-            }
-        }
-
-        if (stack_index == 0)
-        {
-            num_subnetworks++;
-            subnetworks_ids[subnet_index++] = subnetwork_id;
-            subnetwork_id = 0;
-            FLAG_CRUZAMENTO = true;
-            continue;
-        }
-        else if (grafo[grafo_index - 1] == num_routers)
-        {
-            subnetworks_ids[subnet_index++] = subnetwork_id;
-            //printf("SUB %d\n",subnetworks_ids[0]);
-            break;
-        }
-        stack_index -= 1;
-        FLAG_CRUZAMENTO = true;
-    }
-
-    printf("%d\n", num_subnetworks);
-    for (int x = 0; subnetworks_ids[x] != 0; x++)
-    {
-
-        printf("%d", subnetworks_ids[x]);
+        printf("%d ", listOfAdj[i]->discovery);
     }
     printf("\n");
-    printf("%d\n", num_crossRouters);
-    printf("%d\n", max_router_subnet);
+    printf("LOW\n");
+    for (int i = 0; i < num_routers; i++)
+    {
+        printf("%d ", listOfAdj[i]->low);
+    }
+    printf("\n");*/
+    printf("%d\n", num_subnetworks);
+    for (node_t x = subnetworks_ids; x != NULL; x = x->next)
+    {
+        printf("%d ", x->num);
+    }
+    printf("\n");
+    printf("%d\n", articulationPoints);
     return 0;
-}*/
+}
