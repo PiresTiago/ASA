@@ -28,6 +28,18 @@ node_t NEW(int number)
     return x;
 }
 
+router_t NewRouter()
+{
+    router_t router = (router_t)malloc(sizeof(struct router));
+    router->head = NULL;
+    router->numOfChilds = 0;
+    router->visited = false;
+    router->parent = -1;
+    router->articPoint = false;
+    
+    return router;
+}
+
 void addtoListSORTED(node_t *head, int number)
 {
     node_t x = NEW(number);
@@ -58,6 +70,7 @@ void addtoListSORTED(node_t *head, int number)
 void addtoList(node_t *head, int number)
 {
     node_t x = NEW(number);
+    
     x->next = *head;
     *head = x;
 }
@@ -127,23 +140,23 @@ int main()
 
     scanf("%d", &num_routers);
     scanf("%d", &num_connections);
-
     router_t router[num_routers];
+    
     int i = 0;
+    
     for (i = 0; i < num_routers; i++)
-    {
-
-        router[i] = (router_t)malloc(sizeof(struct router));
-        router[i]->head = NULL;
-        router[i]->numOfChilds = 0;
-        router[i]->visited = false;
-        router[i]->parent = -1;
-        router[i]->articPoint = false;
-    }
+        router[i] = NULL;
 
     for (i = 0; i < num_connections; i++)
     {
         scanf("%d %d", &num1, &num2);
+        
+        if (router[num1 - 1] == NULL)
+            router[num1 - 1] = NewRouter();
+            
+        if (router[num2 - 1] == NULL)
+            router[num2 - 1] = NewRouter();
+        
         addtoList(&(router[num1 - 1])->head, num2);
         addtoList(&(router[num2 - 1])->head, num1);
     }
