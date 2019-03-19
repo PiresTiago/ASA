@@ -10,14 +10,14 @@ typedef struct node
 
 typedef struct router
 {
-    int discovery, low, parent, numOfChilds;
+    int discovery, low, parent;
     bool visited, articPoint;
     node_t head;
 } * router_t;
 
 bool SEGUNDA_VOLTA=false;
 int time = 0, num_subnetworks = 0, subnetworkId = 0;
-node_t subnetworksIds = NULL;
+
 int articPointsCnt = 0, max_subnet_size = 0, tmp_subnet_size = 0;
 
 node_t NEW(int number)
@@ -32,7 +32,6 @@ router_t NewRouter()
 {
     router_t router = (router_t)malloc(sizeof(struct router));
     router->head = NULL;
-    router->numOfChilds = 0;
     router->visited = false;
     router->parent = -1;
     router->articPoint = false;
@@ -67,12 +66,50 @@ void addtoListSORTED(node_t *head, int number)
     }
 }
 
+void mergeSortAux(int vector[], int l, int mid, int r)
+{
+    int i, j, k;
+    int aux[r];
+    for(i = mid + 1; i > l; i--)
+        aux[i - 1] = vector[i - 1];
+    for(j = mid; j < r; j++)
+        aux[r + mid - j] = vector[j + 1];
+    for(k = l; k <= r; k++)
+    {
+        if(aux[j] < aux[i])
+            vector[k] = aux[j--];
+        else
+            vector[k] = aux[i++];
+    }
+}
+
+void mergeSort(int vector[], int l, int r)
+{
+    int mid = (r + l) /2;
+    if(r <= l)
+        return;
+    mergeSort(vector, l, mid);
+    mergeSort(vector, mid + 1, r);
+    mergeSortAux(vector, l, mid, r);
+    
+}
+
+void listToArray(node_t *head, int vector[])
+{
+    node_t tmp;
+    int i = 0;
+    for (tmp = *head; tmp != NULL; tmp = tmp->next)
+    {
+        vector[i] = tmp->num;
+        i++;
+    }
+}
+
 void addtoList(node_t *head, int number)
 {
-    node_t x = NEW(number);
-    
-    x->next = *head;
-    *head = x;
+    node_t n = NEW(number);
+    n->next = *head;
+    *head = n;
 }
 
 void printList(node_t head)
@@ -84,7 +121,8 @@ void printList(node_t head)
 
 void DFS(int i, router_t router[])
 { 
-     router[i]->visited = true;
+    int numOfChilds = 0;
+    router[i]->visited = true;
     if (router[i]->articPoint && SEGUNDA_VOLTA)return;
     if (i + 1 > subnetworkId)
         subnetworkId = i + 1;
@@ -99,14 +137,14 @@ void DFS(int i, router_t router[])
             if(router[x->num-1]->articPoint && SEGUNDA_VOLTA) continue;
             
             tmp_subnet_size++;
-            router[i]->numOfChilds++;
+            numOfChilds++;
             router[x->num - 1]->parent = i;
             
             DFS(x->num - 1, router);
             if (router[i]->low > router[x->num - 1]->low)
                 router[i]->low = router[x->num - 1]->low;
 
-            if (router[i]->parent == -1 && router[i]->numOfChilds > 1 && !SEGUNDA_VOLTA)
+            if (router[i]->parent == -1 && numOfChilds > 1 && !SEGUNDA_VOLTA)
             {
 
                 if (!router[i]->articPoint)
@@ -143,6 +181,7 @@ int main()
     router_t router[num_routers];
     
     int i = 0;
+    node_t subnetworksIds;
     
     for (i = 0; i < num_routers; i++)
         router[i] = NULL;
@@ -156,7 +195,7 @@ int main()
             
         if (router[num2 - 1] == NULL)
             router[num2 - 1] = NewRouter();
-        
+
         addtoList(&(router[num1 - 1])->head, num2);
         addtoList(&(router[num2 - 1])->head, num1);
     }
@@ -168,14 +207,14 @@ int main()
             subnetworkId = 0;
             num_subnetworks++;
             DFS(i, router);
+            printf("OLA");
+            addtoList(&subnetworksIds, subnetworkId);
             
-            addtoListSORTED(&subnetworksIds, subnetworkId);
         }
     }
 
     for (i = 0; i < num_routers; i++)
     {
-        router[i]->numOfChilds = 0;
         router[i]->visited = false;
         router[i]->parent = -1;
     }
@@ -197,13 +236,17 @@ int main()
         }
     }
     
+    int subnetworks[num_subnetworks];
+    listToArray(&subnetworksIds, subnetworks);
+    mergeSort(subnetworks, 0, num_subnetworks);
+    
     printf("%d\n", num_subnetworks);
-    node_t x;
-    for (x = subnetworksIds; x->next != NULL; x = x->next)
+    
+    for (i = 0; i < num_subnetworks - 1; i++)
     {
-        printf("%d ", x->num);
+        printf("%d ", subnetworks[i]);
     }
-    printf("%d", x->num);
+    printf("%d", subnetworks[i]);
     printf("\n");
     printf("%d\n", articPointsCnt);
     printf("%d\n", max_subnet_size);
