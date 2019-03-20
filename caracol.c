@@ -15,83 +15,69 @@ typedef struct router
     node_t head;
 } * router_t;
 
-bool SECOND_DFS = false;
-int time = 0, num_subnetworks = 0, subnetworkId = 0;
-node_t subnetworksIds = NULL;
-int articPointsCnt = 0, max_subnet_size = 0, tmp_subnet_size = 0;
+/******************/
+/*Global Variables*/
+/******************/
+bool secondDFS = false;
+int time = 0, numSubnetworks = 0, subnetworkId = 0, articPointsCnt = 0,
+    maxSubnetworkSize = 0, tmpSubnetworkSize = 0;
+/******************/
 
-node_t NEW(int number)
+void *mallocAndVerify(size_t size)
 {
-    node_t x = (node_t)malloc(sizeof(struct node));
-    
-    if (!(x == NULL))
+
+    void *x = malloc(size);
+
+    if (x == NULL)
     {
-        x->num = number;
-        x->next = NULL;    
+        printf("Error in malloc, exiting...\n");
+        exit(EXIT_FAILURE);
     }
-    
     return x;
 }
 
-router_t NewRouter()
+void scanfAndVerify(int *number)
 {
-    router_t router = (router_t)malloc(sizeof(struct router));
-    
+    int x = scanf("%d\n", number);
+
+    if (x < 0)
+    {
+        printf("Error in scanf, exiting...\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+node_t newNode(int number)
+{
+    node_t x = mallocAndVerify(sizeof(struct node));
+
+    if (!(x == NULL))
+    {
+        x->num = number;
+        x->next = NULL;
+    }
+
+    return x;
+}
+
+router_t newRouter()
+{
+    router_t router = mallocAndVerify(sizeof(struct router));
+
     if (!(router == NULL))
     {
         router->head = NULL;
         router->visited = false;
         router->parent = -1;
-        router->articPoint = false;   
+        router->articPoint = false;
     }
 
     return router;
 }
 
-void mergeSortAux(int vector[], int l, int mid, int r)
-{
-    int i, j, k;
-    int aux[r];
-    for (i = mid + 1; i > l; i--)
-        aux[i - 1] = vector[i - 1];
-    for (j = mid; j < r; j++)
-        aux[r + mid - j] = vector[j + 1];
-    for (k = l; k <= r; k++)
-    {
-        if (aux[j] < aux[i])
-            vector[k] = aux[j--];
-        else
-            vector[k] = aux[i++];
-    }
-}
-
-void mergeSort(int vector[], int l, int r)
-{
-    int mid = (r + l) / 2;
-    if (r <= l)
-        return;
-    mergeSort(vector, l, mid);
-    mergeSort(vector, mid + 1, r);
-    mergeSortAux(vector, l, mid, r);
-}
-
-void listToArray(node_t *head, int vector[])
-{
-    node_t tmp = *head, prev = NULL;
-    int i = 0;
-    
-    while (tmp != NULL)
-    {
-        vector[i++] = tmp->num;
-        prev = tmp;
-        tmp = tmp->next;
-        free(prev);
-    }
-}
-
 void addtoList(node_t *head, int number)
 {
-    node_t x = NEW(number);
+    node_t x = newNode(number);
 
     x->next = *head;
     *head = x;
@@ -100,7 +86,7 @@ void addtoList(node_t *head, int number)
 void clearList(node_t head)
 {
     node_t tmp = head, prev = NULL;
-    
+
     while (tmp != NULL)
     {
         prev = tmp;
@@ -112,23 +98,21 @@ void clearList(node_t head)
 void DFS(int i, router_t router[])
 {
     int numOfChilds = 0;
+    node_t x;
+    
     router[i]->visited = true;
-    if (router[i]->articPoint && SECOND_DFS)
+    if (router[i]->articPoint && secondDFS)
         return;
-    if (i + 1 > subnetworkId)
+    else if (i + 1 > subnetworkId)
         subnetworkId = i + 1;
     router[i]->discovery = router[i]->low = time++;
 
-    node_t x;
     for (x = router[i]->head; x != NULL; x = x->next)
     {
-
-        if (router[x->num - 1]->visited == false)
+        if (router[x->num - 1]->visited == false && 
+        !(router[x->num - 1]->articPoint && secondDFS))
         {
-            if (router[x->num - 1]->articPoint && SECOND_DFS)
-                continue;
-
-            tmp_subnet_size++;
+            tmpSubnetworkSize++;
             numOfChilds++;
             router[x->num - 1]->parent = i;
 
@@ -136,22 +120,17 @@ void DFS(int i, router_t router[])
             if (router[i]->low > router[x->num - 1]->low)
                 router[i]->low = router[x->num - 1]->low;
 
-            if (router[i]->parent == -1 && numOfChilds > 1 && !SECOND_DFS)
+            if (router[i]->parent == -1 && numOfChilds > 1
+             && !router[i]->articPoint && !secondDFS)
             {
-
-                if (!router[i]->articPoint)
-                {
-                    articPointsCnt++;
-                    router[i]->articPoint = true;
-                }
+                articPointsCnt++;
+                router[i]->articPoint = true;
             }
-            else if (router[i]->parent != -1 && router[x->num - 1]->low >= router[i]->discovery && !SECOND_DFS)
+            else if (router[i]->parent != -1 && router[x->num - 1]->low >= 
+            router[i]->discovery && !router[i]->articPoint && !secondDFS)
             {
-                if (!router[i]->articPoint)
-                {
-                    articPointsCnt++;
-                    router[i]->articPoint = true;
-                }
+                articPointsCnt++;
+                router[i]->articPoint = true;
             }
         }
         else if (x->num - 1 != router[i]->parent)
@@ -162,97 +141,92 @@ void DFS(int i, router_t router[])
     }
 }
 
-void readConnections(router_t router[], int numRouters, int numConnections)
+router_t *readInput(router_t *router, int **subnetworks, int *numRouters)
 {
-    int i = 0, res = 0, num1 = 0, num2 = 0;
-    
-    for (i = 0; i < numRouters; i++)
+    int numConnections = 0, i = 0, num1 = 0, num2 = 0;
+
+    scanfAndVerify(numRouters);
+    scanfAndVerify(&numConnections);
+
+    router = mallocAndVerify(sizeof(router_t) * *numRouters);
+    *subnetworks = mallocAndVerify(sizeof(int) * *numRouters);
+
+    for (i = 0; i < *numRouters; i++)
+    {
         router[i] = NULL;
+        (*subnetworks)[i] = 0;
+    }
 
     for (i = 0; i < numConnections; i++)
     {
-        res = scanf("%d %d", &num1, &num2);
-        if  (!res) 
-            exit(EXIT_FAILURE);
+        scanfAndVerify(&num1);
+        scanfAndVerify(&num2);
         if (router[num1 - 1] == NULL)
-            router[num1 - 1] = NewRouter();
+            router[num1 - 1] = newRouter();
 
         if (router[num2 - 1] == NULL)
-            router[num2 - 1] = NewRouter();
+            router[num2 - 1] = newRouter();
 
-        addtoList(&(router[num1 - 1])->head, num2);
-        addtoList(&(router[num2 - 1])->head, num1);
+        addtoList(&router[num1 - 1]->head, num2);
+        addtoList(&router[num2 - 1]->head, num1);
     }
+    return router;
 }
 
 int main()
 {
-    int num_routers, num_connections, res;
+    int numRouters, i, *subnetworks = NULL;
+    router_t *router = NULL;
+    router = readInput(router, &subnetworks, &numRouters);
 
-    res = scanf("%d", &num_routers);
-    res = scanf("%d", &num_connections);
-    
-    if (!res)
-        exit(EXIT_FAILURE);
-        
-    router_t *router = (router_t*)malloc(sizeof(router_t)*num_routers);
-    
-
-    readConnections(router, num_routers, num_connections);
-
-    int i = 0;
-
-    for (i = 0; i < num_routers; i++)
+    for (i = 0; i < numRouters; i++)
     {
         if (router[i]->visited == false)
         {
             subnetworkId = 0;
-            num_subnetworks++;
+            numSubnetworks++;
             DFS(i, router);
-            addtoList(&subnetworksIds, subnetworkId);
+            subnetworks[subnetworkId - 1] = subnetworkId;
         }
     }
 
-    for (i = 0; i < num_routers; i++)
+    for (i = 0; i < numRouters; i++)
     {
         router[i]->visited = false;
         router[i]->parent = -1;
     }
-    
-    time = 0;
-    SECOND_DFS = true;
-    tmp_subnet_size = 1;
 
-    for (i = 0; i < num_routers; i++)
+    secondDFS = true;
+    tmpSubnetworkSize = 1;
+
+    for (i = 0; i < numRouters; i++)
     {
         if (router[i]->visited == false)
         {
             DFS(i, router);
-            if (tmp_subnet_size > max_subnet_size)
-                max_subnet_size = tmp_subnet_size;
-            tmp_subnet_size = 1;
+
+            if (tmpSubnetworkSize > maxSubnetworkSize)
+                maxSubnetworkSize = tmpSubnetworkSize;
+            tmpSubnetworkSize = 1;
         }
     }
-    
-    int* subnet = (int*)malloc(sizeof(int)*num_subnetworks);
-    listToArray(&subnetworksIds,subnet);
-    mergeSort(subnet, 0, num_subnetworks - 1);
-    
-    for (i = 0; i < num_routers; i++)
+
+    printf("%d\n", numSubnetworks);
+    for (i = 0; i < numRouters - 1; i++)
     {
+        if (subnetworks[i] != 0)
+            printf("%d ", subnetworks[i]);
         clearList(router[i]->head);
         free(router[i]);
     }
+    clearList(router[i]->head);
+    free(router[i]);
+    if (subnetworks[i] != 0)
+        printf("%d", subnetworks[i]);
+    printf("\n%d\n%d\n", articPointsCnt, maxSubnetworkSize);
 
-    printf("%d\n", num_subnetworks);
-    
-    for (i = 0; i < num_subnetworks - 1; i++)
-        printf("%d ", subnet[i]);
-        
-    printf("%d\n%d\n%d\n", subnet[i], articPointsCnt, max_subnet_size);
-    
-    free(subnet);
     free(router);
-    
+    free(subnetworks);
+
     return 0;
 }
