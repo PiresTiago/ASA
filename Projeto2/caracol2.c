@@ -41,7 +41,6 @@ void scanfAndVerify(int *number)
     }
 }
 
-
 gnode_t newGraphNode()
 {
     gnode_t x = mallocAndVerify(sizeof(struct graphNode));
@@ -53,28 +52,25 @@ gnode_t newGraphNode()
 
 gnode_t *readInput()
 {
-    int i = 0, srcTmp, varTmp;
+    int i = 0, srcTmp;
 
     scanfAndVerify(&numSuppliers);
     scanfAndVerify(&numStations);
     scanfAndVerify(&numConnections);
-    printf("\n\nNum de Fornecedores:%d\nNum de Estações:%d\nNum de ligacoes:%d\n\n",
-           numSuppliers, numStations, numConnections);
 
     graphNode = mallocAndVerify(sizeof(gnode_t) * (numSuppliers + numStations + 1));
 
     for (i = 0; i < (numSuppliers + numStations + 1); i++)
     {
-        newGraphNode(graphNode[i]);
+        graphNode[i] = newGraphNode();
     }
-    printf("OLA\n");
+
     for (i = 1; i < (numSuppliers + 1); i++)
     {
-        scanfAndVerify(&varTmp);
-        graphNode[i]->capacity=varTmp;
+        scanfAndVerify(&graphNode[i]->capacity);
     }
-    printf("OLA\n");
-    for (i = numSuppliers + 1; i < (numSuppliers + numStations); i++)
+
+    for (i = numSuppliers + 1; i < (numSuppliers + numStations + 1); i++)
     {
         scanfAndVerify(&(graphNode[i])->capacity);
     }
@@ -83,8 +79,9 @@ gnode_t *readInput()
     {
         scanfAndVerify(&srcTmp);
         scanfAndVerify(&graphNode[srcTmp - 1]->destination);
-        scanfAndVerify(&graphNode[srcTmp - 1]->capacity);
+        scanfAndVerify(&graphNode[srcTmp - 1]->pathCapacity);
     }
+
     return graphNode;
 }
 
@@ -93,6 +90,7 @@ int main()
     int i;
 
     graphNode = readInput();
+    
     for (i = 0; i < (numSuppliers + numStations + 1); i++)
     {
         printf("Indice:%d Destino:%d Capacidade:%d Caminho:%d\n",
