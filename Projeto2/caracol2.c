@@ -1,0 +1,105 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+typedef struct listNode
+{
+    int num;
+    struct node *next;
+} * lnode_t;
+
+typedef struct graphNode
+{
+    int destination, capacity, pathCapacity;
+    lnode_t head;
+} * gnode_t;
+
+int numSuppliers, numStations, numConnections;
+gnode_t *graphNode = NULL; /*index number+1 is vertex id*/
+
+void *mallocAndVerify(size_t size)
+{
+
+    void *x = malloc(size);
+
+    if (x == NULL)
+    {
+        printf("Error in malloc, exiting...\n");
+        exit(EXIT_FAILURE);
+    }
+    return x;
+}
+
+void scanfAndVerify(int *number)
+{
+    int x = scanf("%d", number);
+
+    if (x < 0)
+    {
+        printf("Error in scanf, exiting...\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+gnode_t newGraphNode()
+{
+    gnode_t x = mallocAndVerify(sizeof(struct graphNode));
+
+    x->head = NULL;
+
+    return x;
+}
+
+gnode_t *readInput()
+{
+    int i = 0, srcTmp, varTmp;
+
+    scanfAndVerify(&numSuppliers);
+    scanfAndVerify(&numStations);
+    scanfAndVerify(&numConnections);
+    printf("\n\nNum de Fornecedores:%d\nNum de Estações:%d\nNum de ligacoes:%d\n\n",
+           numSuppliers, numStations, numConnections);
+
+    graphNode = mallocAndVerify(sizeof(gnode_t) * (numSuppliers + numStations + 1));
+
+    for (i = 0; i < (numSuppliers + numStations + 1); i++)
+    {
+        newGraphNode(graphNode[i]);
+    }
+    printf("OLA\n");
+    for (i = 1; i < (numSuppliers + 1); i++)
+    {
+        scanfAndVerify(&varTmp);
+        graphNode[i]->capacity=varTmp;
+    }
+    printf("OLA\n");
+    for (i = numSuppliers + 1; i < (numSuppliers + numStations); i++)
+    {
+        scanfAndVerify(&(graphNode[i])->capacity);
+    }
+
+    for (i = 1; i < (numSuppliers + numStations + 1); i++)
+    {
+        scanfAndVerify(&srcTmp);
+        scanfAndVerify(&graphNode[srcTmp - 1]->destination);
+        scanfAndVerify(&graphNode[srcTmp - 1]->capacity);
+    }
+    return graphNode;
+}
+
+int main()
+{
+    int i;
+
+    graphNode = readInput();
+    for (i = 0; i < (numSuppliers + numStations + 1); i++)
+    {
+        printf("Indice:%d Destino:%d Capacidade:%d Caminho:%d\n",
+               i + 1, graphNode[i]->destination, graphNode[i]->capacity, graphNode[i]->pathCapacity);
+    }
+    printf("\n\nNum de Fornecedores:%d\nNum de Estações:%d\nNum de ligacoes:%d\n\n",
+           numSuppliers, numStations, numConnections);
+
+    return EXIT_SUCCESS;
+}
