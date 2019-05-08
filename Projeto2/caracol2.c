@@ -64,6 +64,8 @@ void addtoList(lnode_t *head, int dest, int cap)
     lnode_t x = newNode(dest, cap);
 
     x->pathFlow = 0; /*Pre-Flow*/
+    x->destination = dest;
+    x->pathCapacity = cap;
     x->next = *head;
     *head = x;
 }
@@ -74,6 +76,8 @@ gnode_t newGraphNode()
 
     node->height = 0; /*Pre-Flow*/
     node->flow = 0;   /*Pre-Flow*/
+    node->sources = NULL;
+    node->destinations = NULL;
 
     return node;
 }
@@ -140,6 +144,9 @@ void PushRelabel_PUSH(gnode_t src, gnode_t dest, int destID, int srcID)
     lnode_t srcDest, destSrc;
     int add = 0;
 
+    if (dest->sources == NULL || dest->destinations == NULL)
+        return;
+
     for (srcDest = src->destinations; srcDest != NULL; srcDest = srcDest->next)
     {
         if (srcDest->destination == destID)
@@ -151,7 +158,7 @@ void PushRelabel_PUSH(gnode_t src, gnode_t dest, int destID, int srcID)
     }
     printf("VALUE ADD:%d\n", add);
 
-    for (destSrc = dest->destinations; destSrc != NULL; destSrc = destSrc->next)
+    for (destSrc = dest->sources; destSrc != NULL; destSrc = destSrc->next)
     {
         if (destSrc->destination == srcID)
         {
@@ -177,6 +184,23 @@ void PushRelabel_RELABEL(gnode_t src)
 
 void PushRelabel()
 {
+    int i = 0;
+    lnode_t j = NULL;
+    for (i = 0; i < numSuppliers + 1; i++)
+    {
+        for (j = graphNode[i]->destinations; j != NULL; j = j->next)
+            PushRelabel_PUSH(graphNode[i], graphNode[j->destination], j->destination, i);
+    }
+
+    for(i = numSuppliers + 1; i < (numSuppliers + numStations + 1); i++)
+    {
+        if (graphNode[i]->flow > 0)
+        {
+            PushRelabel_RELABEL(graphNode[i]);
+            for (j = graphNode[i]->destinations; j != NULL; j = j->next)
+                PushRelabel_PUSH(graphNode[i], graphNode[j->destination], j->destination, i);
+        }
+    }
 
 }
 
@@ -208,7 +232,8 @@ int main()
 {
     graphNode = readInput();
     testInput();
-    PushRelabel_PUSH(graphNode[1], graphNode[4], 5, 2);
+    /*PushRelabel_PUSH(graphNode[1], graphNode[4], 5, 2);*/
+    PushRelabel();
     testInput();
     return EXIT_SUCCESS;
 }
