@@ -11,7 +11,7 @@ typedef struct listNode
 typedef struct graphNode
 {
     int destination, capacity, pathCapacity;
-    lnode_t head;
+    int height, excess;
 } * gnode_t;
 
 int numSuppliers, numStations, numConnections;
@@ -32,9 +32,9 @@ void *mallocAndVerify(size_t size)
 
 void scanfAndVerify(int *number)
 {
-    int x = scanf("%d", number);
+    int error = scanf("%d", number);
 
-    if (x < 0)
+    if (error < 0)
     {
         printf("Error in scanf, exiting...\n");
         exit(EXIT_FAILURE);
@@ -43,11 +43,9 @@ void scanfAndVerify(int *number)
 
 gnode_t newGraphNode()
 {
-    gnode_t x = mallocAndVerify(sizeof(struct graphNode));
+    gnode_t node = mallocAndVerify(sizeof(struct graphNode));
 
-    x->head = NULL;
-
-    return x;
+    return node;
 }
 
 gnode_t *readInput()
@@ -90,7 +88,7 @@ int main()
     int i;
 
     graphNode = readInput();
-    
+
     for (i = 0; i < (numSuppliers + numStations + 1); i++)
     {
         printf("Indice:%d Destino:%d Capacidade:%d Caminho:%d\n",
