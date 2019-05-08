@@ -15,7 +15,7 @@ typedef struct graphNode
 {
     int capacity;
     int height, flow;
-    lnode_t list;
+    lnode_t destinations, sources;
 } * gnode_t;
 
 int numSuppliers, numStations, numConnections;
@@ -110,15 +110,16 @@ gnode_t *readInput()
         scanfAndVerify(&destTmp);
         scanfAndVerify(&pathCapTmp);
 
-        addtoList(&graphNode[srcTmp - 1]->list, destTmp, pathCapTmp);
+        addtoList(&graphNode[srcTmp - 1]->destinations, destTmp, pathCapTmp);
+        addtoList(&graphNode[destTmp - 1]->sources, srcTmp, pathCapTmp);
     }
 
     for (i = 1; i < numSuppliers; i++)
     {
-        for (x = graphNode[i]->list; x != NULL; x = x->next)
+        for (x = graphNode[i]->destinations; x != NULL; x = x->next)
         {
             x->pathFlow = min(graphNode[i]->capacity, x->pathCapacity);
-            for (y = graphNode[x->destination - 1]->list; y != NULL; y = y->next)
+            for (y = graphNode[x->destination - 1]->destinations; y != NULL; y = y->next)
             {
                 if (y->destination == i)
                 {
@@ -139,7 +140,7 @@ void PushRelabel_PUSH(gnode_t src, gnode_t dest, int destID, int srcID)
     lnode_t srcDest, destSrc;
     int add = 0;
 
-    for (srcDest = src->list; srcDest != NULL; srcDest = srcDest->next)
+    for (srcDest = src->destinations; srcDest != NULL; srcDest = srcDest->next)
     {
         if (srcDest->destination == destID)
         {
@@ -150,7 +151,7 @@ void PushRelabel_PUSH(gnode_t src, gnode_t dest, int destID, int srcID)
     }
     printf("VALUE ADD:%d\n", add);
 
-    for (destSrc = dest->list; destSrc != NULL; destSrc = destSrc->next)
+    for (destSrc = dest->destinations; destSrc != NULL; destSrc = destSrc->next)
     {
         if (destSrc->destination == srcID)
         {
@@ -168,8 +169,8 @@ void PushRelabel_RELABEL(gnode_t src)
     int minHeight = src->height;
     lnode_t y;
 
-    for (y = src->list; y != NULL; y = y->next)
-        min(graphNode[y->destination - 1]->height, minHeight);
+    for (y = src->destinations; y != NULL; y = y->next)
+        minHeight = min(graphNode[y->destination - 1]->height, minHeight);
 
     src->height = 1 + minHeight;
 }
@@ -188,9 +189,14 @@ void testInput()
     {
         printf("Indice:%d | Altura:%d | Fluxo:%d | Capacidade:%d\n",
                i + 1, graphNode[i]->height, graphNode[i]->flow, graphNode[i]->capacity);
-        for (j = graphNode[i]->list; j != NULL; j = j->next)
+        for (j = graphNode[i]->destinations; j != NULL; j = j->next)
         {
             printf("    Destino:%d FluxCaminho:%d CapCaminho:%d\n",
+                   j->destination, j->pathFlow, j->pathCapacity);
+        }
+        for (j = graphNode[i]->sources; j != NULL; j = j->next)
+        {
+            printf("    Origem:%d FluxCaminho:%d CapCaminho:%d\n",
                    j->destination, j->pathFlow, j->pathCapacity);
         }
     }
