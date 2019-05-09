@@ -5,21 +5,22 @@
 #define min(x, y) (x < y ? x : y)
 #define max(x, y) (x > y ? x : y)
 
-typedef struct listNode
-{
-    int pathCapacity, pathFlow, destination;
-    struct listNode *next;
-} * lnode_t;
+int numSuppliers, numStations, numConnections;
 
-typedef struct graphNode
+typedef struct edgeNode
 {
-    int capacity;
-    int height, flow;
-    lnode_t destinations, sources;
+    int source, dest;
+    int maxCapacity, flow;
+    struct edgeNode* next;
+} * enode_t;
+
+typedef struct vertexNode
+{
+    int height, excess;
+    enode_t edgeList;
 } * gnode_t;
 
-int numSuppliers, numStations, numConnections;
-gnode_t *graphNode = NULL; /*index number+1 is vertex id*/
+gnode_t* graph = NULL;
 
 void *mallocAndVerify(size_t size)
 {
@@ -40,106 +41,97 @@ void scanfAndVerify(int *number)
 
     if (error < 0)
     {
-        printf("Error in scanf, exiting...\n");
+        printf("Error in scanf, exiting...%d\n", error);
         exit(EXIT_FAILURE);
     }
 }
 
-lnode_t newNode(int dest, int cap)
+enode_t newEdgeNode(int src, int dest, int max)
 {
-    lnode_t x = mallocAndVerify(sizeof(struct listNode));
+    enode_t x = mallocAndVerify(sizeof(struct edgeNode));
 
     if (!(x == NULL))
     {
-        x->destination = dest;
-        x->pathCapacity = cap;
-        x->pathFlow = 0;
+        x->source = src;
+        x->dest = dest;
+        x->maxCapacity = max;
         x->next = NULL;
     }
     return x;
 }
 
-void addtoList(lnode_t *head, int dest, int cap)
+void addtoList(enode_t *head, int src, int dest, int max)
 {
-    lnode_t x = newNode(dest, cap);
+    enode_t x = newEdgeNode(src, dest, max);
 
-    x->pathFlow = 0; /*Pre-Flow*/
-    x->destination = dest;
-    x->pathCapacity = cap;
     x->next = *head;
     *head = x;
 }
 
-gnode_t newGraphNode()
+gnode_t newVertexNode()
 {
-    gnode_t node = mallocAndVerify(sizeof(struct graphNode));
+    gnode_t node = mallocAndVerify(sizeof(struct vertexNode));
 
-    node->height = 0; /*Pre-Flow*/
-    node->flow = 0;   /*Pre-Flow*/
-    node->sources = NULL;
-    node->destinations = NULL;
-
+    node->height = 0;
+    node->excess = 0;
+    node->edgeList = NULL;
     return node;
 }
 
-gnode_t *readInput()
+void readInput()
 {
-    int i = 0, srcTmp, destTmp, pathCapTmp;
-    lnode_t x, y;
+    int i = 0, j = 0, srcTmp = 0, destTmp = 0, pathCapTmp = 0;
+    int maxCapacityTmp = 0, total = 0;
+    enode_t edge;
 
     scanfAndVerify(&numSuppliers);
     scanfAndVerify(&numStations);
     scanfAndVerify(&numConnections);
 
-    graphNode = mallocAndVerify(sizeof(gnode_t) * (numSuppliers + numStations + 1));
-    graphNode[0] = newGraphNode();
+    total = numSuppliers + numStations*2 + 2;
 
-    for (i = 1; i < (numSuppliers + 1); i++) /*Sources*/
+    graph = mallocAndVerify(sizeof(gnode_t) * total);
+    graph[0] = newVertexNode(); /* Source */
+    graph[1] = newVertexNode(); /* Supermarket*/
+
+    for (i = 2; i < (numSuppliers + 2); i++) /* Sources */
     {
-        graphNode[i] = newGraphNode();
-        scanfAndVerify(&graphNode[i]->capacity);
-        graphNode[i]->flow = graphNode[i]->capacity;
-        graphNode[i]->height = numSuppliers + numStations + 1; /*Src heights=num of vertices*/
+       graph[i] = newVertexNode();
+       scanfAndVerify(&maxCapacityTmp);
+       addtoList(&graph[0]->edgeList, 0, i, maxCapacityTmp);
     }
 
-    for (i = numSuppliers + 1; i < (numSuppliers + numStations + 1); i++) /*Stations*/
+    for (j = i; j < (numSuppliers + numStations + 2); j++) /* Stations */
     {
-        graphNode[i] = newGraphNode();
-        scanfAndVerify(&(graphNode[i])->capacity);
+        graph[j] = newVertexNode();
+        graph[j + numStations] = newVertexNode();
+        scanfAndVerify(&maxCapacityTmp);
+        addtoList(&graph[j]->edgeList, j, j + numStations, maxCapacityTmp);
     }
 
-    for (i = 1; i < (numSuppliers + numStations + 1); i++)
+    for (i = 1; i <= numConnections; i++)
     {
         scanfAndVerify(&srcTmp);
         scanfAndVerify(&destTmp);
         scanfAndVerify(&pathCapTmp);
 
-        addtoList(&graphNode[srcTmp - 1]->destinations, destTmp, pathCapTmp);
-        addtoList(&graphNode[destTmp - 1]->sources, srcTmp, pathCapTmp);
+        if (srcTmp >= 2 && srcTmp <= numSuppliers + 1)
+            addtoList(&graph[srcTmp]->edgeList, srcTmp, destTmp, pathCapTmp);
+        else
+            addtoList(&graph[srcTmp + numStations]->edgeList, srcTmp + numStations, destTmp, pathCapTmp);
+        
+        
     }
 
-    for (i = 1; i < numSuppliers; i++)
+    for (edge = graph[0]->edgeList; edge != NULL; edge = edge->next)
     {
-        for (x = graphNode[i]->destinations; x != NULL; x = x->next)
-        {
-            x->pathFlow = min(graphNode[i]->capacity, x->pathCapacity);
-            for (y = graphNode[x->destination - 1]->destinations; y != NULL; y = y->next)
-            {
-                if (y->destination == i)
-                {
-                    y->pathFlow = -x->pathFlow;
-                    break;
-                }
-            }
-            graphNode[x->destination - 1]->flow = x->pathFlow;
-            graphNode[i]->flow -= x->pathFlow;
-        }
+        edge->flow = edge->maxCapacity;
+        graph[edge->dest]->excess = edge->maxCapacity;
+        graph[0]->excess -= edge->maxCapacity;
     }
-
-    return graphNode;
 }
 
-void PushRelabel_PUSH(gnode_t src, gnode_t dest, int destID, int srcID)
+/*void PushRelabel_PUSH(gnode_t src, gnode_t dest, int destID, int srcID)
 {
     lnode_t srcDest, destSrc;
     int add = 0;
@@ -201,27 +193,21 @@ void PushRelabel()
                 PushRelabel_PUSH(graphNode[i], graphNode[j->destination], j->destination, i);
         }
     }
-
 }
-
+*/
 void testInput()
 {
     int i;
-    lnode_t j;
+    enode_t j;
 
-    for (i = 0; i < (numSuppliers + numStations + 1); i++)
+    for (i = 0; i < (numSuppliers + numStations*2 + 2); i++)
     {
-        printf("Indice:%d | Altura:%d | Fluxo:%d | Capacidade:%d\n",
-               i + 1, graphNode[i]->height, graphNode[i]->flow, graphNode[i]->capacity);
-        for (j = graphNode[i]->destinations; j != NULL; j = j->next)
+        printf("Indice: %d | Altura:%d | Excesso:%d \n",
+               i, graph[i]->height, graph[i]->excess);
+        for (j = graph[i]->edgeList; j != NULL; j = j->next)
         {
             printf("    Destino:%d FluxCaminho:%d CapCaminho:%d\n",
-                   j->destination, j->pathFlow, j->pathCapacity);
-        }
-        for (j = graphNode[i]->sources; j != NULL; j = j->next)
-        {
-            printf("    Origem:%d FluxCaminho:%d CapCaminho:%d\n",
-                   j->destination, j->pathFlow, j->pathCapacity);
+                   j->dest, j->flow, j->maxCapacity);
         }
     }
     printf("\n\nNum de Fornecedores:%d\nNum de Estações:%d\nNum de ligacoes:%d\n\n",
@@ -230,10 +216,9 @@ void testInput()
 
 int main()
 {
-    graphNode = readInput();
+    readInput();
     testInput();
     /*PushRelabel_PUSH(graphNode[1], graphNode[4], 5, 2);*/
-    PushRelabel();
-    testInput();
+    /*PushRelabel();*/
     return EXIT_SUCCESS;
 }
