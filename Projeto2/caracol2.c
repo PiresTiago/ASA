@@ -91,7 +91,7 @@ void Preflow()
 
     total = numSuppliers + numStations * 2 + 2;
 
-    graph = mallocAndVerify(sizeof(vertex_t) * total);
+    graph = mallocAndVerify(sizeof(struct vertex) * total);
 
     graph[0] = newVertex(); /* Source */
     graph[0]->height = total;
@@ -132,7 +132,6 @@ void Preflow()
             addtoList(&graph[srcTmp]->edgeList, srcTmp, destTmp, pathCapTmp);
             addtoList(&graph[destTmp]->edgeList, destTmp, srcTmp, 0);
         }
-
         else
         {
             addtoList(&graph[srcTmp + numStations]->edgeList, srcTmp + numStations, destTmp, pathCapTmp);
@@ -189,7 +188,7 @@ void Discharge(vertex_t u)
     edge_t uv;
     vertex_t v;
 
-    while (u->excess > 0)
+    while (u->excess > 0 && edgeToNeighbor != NULL)
     {
         v = graph[edgeToNeighbor->dest]; /*neighbor*/
         if (v == NULL)
@@ -207,7 +206,8 @@ void Discharge(vertex_t u)
         if (uv != 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
             Push(u, v);
 
-        else edgeToNeighbor = edgeToNeighbor->next; /*edge to next neighbor*/
+        else 
+            edgeToNeighbor = edgeToNeighbor->next; /*edge to next neighbor*/
     }
 }
 
@@ -256,7 +256,7 @@ int main()
 {
     Preflow();
     printGraph();
-    Discharge(graph[2]);
+    Discharge(graph[4]);
     printGraph();
 
     listOfVertices = mallocAndVerify(sizeof(int) * numSuppliers + numStations);
