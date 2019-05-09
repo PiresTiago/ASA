@@ -18,11 +18,13 @@ typedef struct vertex
 {
     int height, excess;
     edge_t edgeList;
+    struct vertex* next;
 } * vertex_t;
 
 /*GLOBAL VARS*/
 vertex_t *graph = NULL;
-int *listOfVertices;
+vertex_t listOfVertices_HEAD = NULL;
+vertex_t listOfVertices_TAIL = NULL;
 
 void *mallocAndVerify(size_t size)
 {
@@ -69,6 +71,29 @@ void addtoList(edge_t *head, int src, int dest, int max)
     *head = x;
 }
 
+void addVertextToList(vertex_t v)
+{
+    if (listOfVertices_HEAD == NULL)
+    {
+        listOfVertices_HEAD = v;
+        listOfVertices_TAIL = v;
+    }
+    else
+    {
+        listOfVertices_TAIL->next = v;
+        listOfVertices_TAIL = v;
+    }
+}
+
+void vertexAtBeginning(vertex_t v)
+{
+    vertex_t prev;
+    for (prev = listOfVertices_HEAD; prev->next != v; prev = prev->next);
+    prev->next = v->next;
+    v->next = listOfVertices_HEAD;
+    listOfVertices_HEAD = v;
+}
+
 vertex_t newVertex()
 {
     vertex_t vertex = mallocAndVerify(sizeof(struct vertex));
@@ -101,20 +126,25 @@ void Preflow()
     for (i = 2; i < (numSuppliers + 2); i++) /* Suppliers */
     {
         graph[i] = newVertex();
-
+        addVertextToList(graph[i]);
         scanfAndVerify(&maxCapacityTmp);
 
         graph[i]->excess = maxCapacityTmp;
         graph[0]->excess -= maxCapacityTmp;
 
-        addtoList(&graph[0]->edgeList, 0, i, 0);
-        addtoList(&graph[i]->edgeList, i, 0, maxCapacityTmp);
+        addtoList(&graph[0]->edgeList, 0, i, maxCapacityTmp);
+        graph[0]->edgeList->flow = maxCapacityTmp;
+        addtoList(&graph[i]->edgeList, i, 0, 0);
+        graph[i]->edgeList->flow = -maxCapacityTmp;
+
     }
 
     for (j = i; j < (numSuppliers + numStations + 2); j++) /* Stations */
     {
         graph[j] = newVertex();
+        addVertextToList(graph[j]);
         graph[j + numStations] = newVertex();
+        addVertextToList(graph[j + numStations]);
 
         scanfAndVerify(&maxCapacityTmp);
         addtoList(&graph[j]->edgeList, j, j + numStations, maxCapacityTmp);
@@ -191,47 +221,43 @@ void Discharge(vertex_t u)
     while (u->excess > 0 && edgeToNeighbor != NULL)
     {
         v = graph[edgeToNeighbor->dest]; /*neighbor*/
-        if (v == NULL)
-        {
-            Relabel(u);
-            edgeToNeighbor = u->edgeList; /*edge to first neighbor*/
-        }
 
         for (uv = u->edgeList; uv != NULL; uv = uv->next)
         {
             if (uv->dest == v->edgeList->source) /*checks if uv edge destination == v*/
                 break;                           /*uv edge exists and uv = uv edge*/
         }
-    
-        if (uv != 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
-            Push(u, v);
 
+        if (v == NULL)
+        {
+            Relabel(u);
+            edgeToNeighbor = u->edgeList; /*edge to first neighbor*/
+        }
+        else if (uv != 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
+            Push(u, v);
         else 
             edgeToNeighbor = edgeToNeighbor->next; /*edge to next neighbor*/
     }
 }
 
-/*
+
 void RelabelToFront()
 {
-    int i = 0;
-    edge_t j = NULL;
-    for (i = 0; i < numSuppliers + 1; i++)
+    vertex_t u = listOfVertices_HEAD;
+    int oldh = 0;
+    
+    Preflow();
+    
+    while (u != NULL)
     {
-        for (j = graphNode[i]->destinations; j != NULL; j = j->next)
-            PushRelabel_PUSH(graphNode[i], graphNode[j->destination], j->destination, i);
+        oldh = u->height;
+        Discharge(u);
+        if (u->height > oldh)
+            vertexAtBeginning(u);
+        /* nao sei o que meter aqui */
     }
-
-    for (i = numSuppliers + 1; i < (numSuppliers + numStations + 1); i++)
-    {
-        if (graphNode[i]->flow > 0)
-        {
-            PushRelabel_RELABEL(graphNode[i]);
-            for (j = graphNode[i]->destinations; j != NULL; j = j->next)
-                PushRelabel_PUSH(graphNode[i], graphNode[j->destination], j->destination, i);
-        }
-    }
-}*/
+    
+}
 
 void printGraph()
 {
@@ -255,10 +281,5 @@ void printGraph()
 int main()
 {
     Preflow();
-    printGraph();
-    Discharge(graph[4]);
-    printGraph();
-
-    listOfVertices = mallocAndVerify(sizeof(int) * numSuppliers + numStations);
     return EXIT_SUCCESS;
 }
