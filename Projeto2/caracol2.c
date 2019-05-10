@@ -198,14 +198,19 @@ void Push(vertex_t u, vertex_t v)
 
 void Relabel(vertex_t u)
 {
-    int minHeight = graph[u->edgeList->dest]->height;
+    int minHeight = 0;
     edge_t edge;
 
     for (edge = u->edgeList; edge != NULL; edge = edge->next)
     {
-        if (u->height < 1 + graph[edge->dest]->height)
-            minHeight = min(graph[edge->dest]->height, minHeight);
-            /* ter que mudar isto */
+        if (graph[edge->dest]->height > u->height)
+        {
+            
+            if(minHeight == 0)
+                minHeight=graph[edge->dest]->height;
+            else
+                minHeight = min(graph[edge->dest]->height, minHeight);
+        }
     }
 
     u->height = 1 + minHeight;
