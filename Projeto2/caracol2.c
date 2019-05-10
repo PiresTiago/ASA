@@ -10,7 +10,7 @@ int numSuppliers, numStations, numConnections;
 typedef struct edge
 {
     int source, dest;
-    int flow;
+    int flow, maxCapacity;
     struct edge *next;
 } * edge_t;
 
@@ -56,7 +56,8 @@ edge_t newEdge(int src, int dest, int max)
     {
         x->source = src;
         x->dest = dest;
-        x->flow = max;
+        x->flow = 0;
+        x->maxCapacity = max;
         x->next = NULL;
     }
     return x;
@@ -176,8 +177,8 @@ void Push(vertex_t u, vertex_t v)
     {
         if (uv->dest == v->edgeList->source) /*checks if uv edge destination == v*/
         {                                    /*uv edge exists and uv = uv edge*/
-            add = min(u->excess, uv->flow);
-            uv->flow -= add;
+            add = min(u->excess, uv->maxCapacity);
+            uv->flow += add;
             break;
         }
     }
@@ -186,7 +187,7 @@ void Push(vertex_t u, vertex_t v)
     {
         if (vu->dest == u->edgeList->source) /*checks if vu edge destination == u*/
         {                                    /*vu edge exists and vu = vu edge*/
-            vu->flow += add;
+            vu->flow -= add;
             break;
         }
     }
@@ -197,13 +198,18 @@ void Push(vertex_t u, vertex_t v)
 
 void Relabel(vertex_t u)
 {
-    int minHeight = u->height;
+    int minHeight = graph[u->edgeList->dest]->height;
     edge_t edge;
 
     for (edge = u->edgeList; edge != NULL; edge = edge->next)
-        minHeight = min(u->height, minHeight);
+    {
+        if (u->height < 1 + graph[edge->dest]->height)
+            minHeight = min(graph[edge->dest]->height, minHeight);
+            /* ter que mudar isto */
+    }
 
     u->height = 1 + minHeight;
+    printf("%d\n", u->height);
 }
 
 void Discharge(vertex_t u)
@@ -228,7 +234,7 @@ void Discharge(vertex_t u)
                 break;                           /*uv edge exists and uv = uv edge*/
         }
 
-        if (uv != 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
+        if ((uv->maxCapacity - uv->flow > 0) && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
             Push(u, v);
         else
             edgeToNeighbor = edgeToNeighbor->next; /*edge to next neighbor*/
@@ -237,10 +243,12 @@ void Discharge(vertex_t u)
 
 void RelabelToFront()
 {
-    vertex_t u = listOfVertices;
+    vertex_t u;
     int oldh = 0;
 
     Preflow();
+    
+    u = listOfVertices;
 
     while (u != NULL)
     {
@@ -248,7 +256,7 @@ void RelabelToFront()
         Discharge(u);
         if (u->height > oldh)
             vertexAtBeginning(u);
-        /* nao sei o que meter aqui */
+        u = u->next;
     }
 }
 
@@ -283,9 +291,8 @@ void printListOfVertices()
 
 int main()
 {
-    Preflow();
-    printGraph();
-    Discharge(graph[2]);
-    printGraph();
+    RelabelToFront();
+    printListOfVertices();
+    /*printGraph();*/
     return EXIT_SUCCESS;
 }
