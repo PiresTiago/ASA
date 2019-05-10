@@ -7,6 +7,7 @@
 
 int numSuppliers, numStations, numConnections;
 
+
 typedef struct edge
 {
     int source, dest;
@@ -23,7 +24,10 @@ typedef struct vertex
 
 /*GLOBAL VARS*/
 vertex_t *graph = NULL;
+
+
 vertex_t listOfVertices = NULL;
+vertex_t listOfVertices_TAIL = NULL;
 
 void *mallocAndVerify(size_t size)
 {
@@ -70,28 +74,41 @@ void addtoList(edge_t *head, int src, int dest, int flow, int cap)
     x->next = *head;
     *head = x;
 }
+void printListOfVertices()
+{
+    vertex_t x;
+    for (x = listOfVertices; x->next != NULL; x = x->next)
+    {
+        printf(" %d ->", x->edgeList->source);
+    }
+    printf(" %d\n", x->edgeList->source);
+}
 
 void pushQueue(vertex_t v)
 {
-    vertex_t x= listOfVertices;
-
-    x->next=v;
-    v->next = listOfVertices->next;
-    listOfVertices = x;
+    if (listOfVertices_TAIL == NULL)
+    {
+        listOfVertices = listOfVertices_TAIL = v;
+    }
+    else
+    {
+        listOfVertices_TAIL->next = v;
+        listOfVertices_TAIL = v;
+    }
 }
 
 void popQueue()
 {
-    listOfVertices = listOfVertices->next;
-}
+    if (listOfVertices == NULL);
+    else{
+        vertex_t x=listOfVertices;
+        listOfVertices=listOfVertices->next;
+        x->next=NULL;
 
-void vertexAtBeginning(vertex_t v)
-{
-    vertex_t prev;
-    for (prev = listOfVertices; prev->next != v; prev = prev->next);
-    prev->next = v->next;
-    v->next = listOfVertices;
-    listOfVertices = v;
+        if (listOfVertices == NULL){
+            listOfVertices_TAIL=NULL;
+        }
+    }
 }
 
 vertex_t newVertex()
@@ -101,6 +118,7 @@ vertex_t newVertex()
     vertex->height = 0;
     vertex->excess = 0;
     vertex->edgeList = NULL;
+    vertex->next = NULL;
 
     return vertex;
 }
@@ -170,18 +188,18 @@ void Preflow()
 void Push(vertex_t u, vertex_t v)
 {
     edge_t uv, vu;
-    int add = 0;
+    vertex_t o;
 
+    int add = 0, oldexcess = v->excess;
     for (uv = u->edgeList; uv != NULL; uv = uv->next)
     {
-        if (uv->dest == v->edgeList->source) /*checks if uv edge destination == v*/
-        {                                    /*uv edge exists and uv = uv edge*/
+        if (uv->dest == v->edgeList->source)               /*checks if uv edge destination == v*/
+        {                                                  /*uv edge exists and uv = uv edge*/
             add = min(u->excess, uv->capacity - uv->flow); /*vu edge exists and vu = vu edge*/
             uv->flow += add;
             break;
         }
     }
-
 
     for (vu = v->edgeList; vu != NULL; vu = vu->next)
     {
@@ -193,10 +211,12 @@ void Push(vertex_t u, vertex_t v)
     }
 
     u->excess -= add;
-    if (u->excess==0)
-        popQueue();
     v->excess += add;
-    pushQueue(v);
+
+    if (oldexcess == 0 && v->edgeList->source != 1 && v->edgeList->source != 0)
+    {
+        pushQueue(v);
+    }
 }
 
 void Relabel(vertex_t u)
@@ -205,7 +225,7 @@ void Relabel(vertex_t u)
     edge_t edge;
     for (edge = u->edgeList; edge != NULL; edge = edge->next)
     {
-        if (graph[edge->dest]->height >= u->height && edge->capacity != 0)
+        if (graph[edge->dest]->height >= u->height && (edge->capacity - edge->flow != 0))
         {
             if (minHeight == -1)
                 minHeight = graph[edge->dest]->height;
@@ -229,21 +249,13 @@ void printGraph()
         {
             /*printf("    ID:%d | f:%d\n",
                    j->dest, j->flow);*/
-            printf("    DST:%d  CAPF:%d\n", j->dest, j->capacity- j->flow);
+            printf("    DST:%d  CAPF:%d\n", j->dest, j->capacity - j->flow);
         }
     }
     printf("\n\nNum de Fornecedores:%d\nNum de Estações:%d\nNum de ligacoes:%d\n\n",
            numSuppliers, numStations, numConnections);
 }
-void printListOfVertices()
-{
-    vertex_t x;
-    for (x = listOfVertices; x->next != NULL; x = x->next)
-    {
-        printf(" %d ->", x->edgeList->source);
-    }
-    printf(" %d\n", x->edgeList->source);
-}
+
 void Discharge(vertex_t u)
 {
     edge_t edgeToNeighbor = u->edgeList; /*edge to first neighbor*/
@@ -255,7 +267,7 @@ void Discharge(vertex_t u)
         if (edgeToNeighbor == NULL)
         {
             Relabel(u);
-            edgeToNeighbor = u->edgeList; /*edge to first neighbor*/            
+            edgeToNeighbor = u->edgeList; /*edge to first neighbor*/
         }
         else
         {
@@ -266,40 +278,37 @@ void Discharge(vertex_t u)
             printf("SRC:%d  DST:%d\n", u->edgeList->source, edgeToNeighbor->dest);
             printf("FLOW AVAILABLE:%d\n\n", edgeToNeighbor->capacity-edgeToNeighbor->flow);
             printf("");*/
-            if (edgeToNeighbor->capacity - edgeToNeighbor->flow > 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
+            if ((edgeToNeighbor->capacity - edgeToNeighbor->flow) > 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
+            {
                 Push(u, v);
+            }
             else
                 edgeToNeighbor = edgeToNeighbor->next; /*edge to next neighbor*/
         }
     }
 }
 
-void RelabelToFront()
+void PushRelabel()
 {
     vertex_t u;
-    int oldh = 0;
-   /* Preflow();*/
-    int x=0,y;
-    u = listOfVertices;
 
-    while (u != NULL)
+    while (listOfVertices != NULL)
     {
-        /*printf("\n\nID VERTICE:%d\n\n", u->edgeList->source);*/
-        oldh = u->height;
-
-        Discharge(u);
-        if (u->height > oldh)
-            vertexAtBeginning(u);
-        u = u->next;
-        x++;
+        /*printf("\n\nID VERTICE:%d\n\n", listOfVertices->edgeList->source);*/
+        printListOfVertices();
+        printGraph();
+        printf("\n\n");
+        Discharge(listOfVertices);
+        popQueue(listOfVertices);
     }
 }
 
 int main()
 {
     Preflow();
-    RelabelToFront();
+
     printGraph();
-    printListOfVertices();
+    PushRelabel();
+    printGraph();
     return EXIT_SUCCESS;
 }
