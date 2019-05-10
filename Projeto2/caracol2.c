@@ -18,13 +18,12 @@ typedef struct vertex
 {
     int height, excess;
     edge_t edgeList;
-    struct vertex* next;
+    struct vertex *next;
 } * vertex_t;
 
 /*GLOBAL VARS*/
 vertex_t *graph = NULL;
-vertex_t listOfVertices_HEAD = NULL;
-vertex_t listOfVertices_TAIL = NULL;
+vertex_t listOfVertices = NULL;
 
 void *mallocAndVerify(size_t size)
 {
@@ -73,25 +72,18 @@ void addtoList(edge_t *head, int src, int dest, int max)
 
 void addVertextToList(vertex_t v)
 {
-    if (listOfVertices_HEAD == NULL)
-    {
-        listOfVertices_HEAD = v;
-        listOfVertices_TAIL = v;
-    }
-    else
-    {
-        listOfVertices_TAIL->next = v;
-        listOfVertices_TAIL = v;
-    }
+    v->next = listOfVertices;
+    listOfVertices = v;
 }
 
 void vertexAtBeginning(vertex_t v)
 {
     vertex_t prev;
-    for (prev = listOfVertices_HEAD; prev->next != v; prev = prev->next);
+    for (prev = listOfVertices; prev->next != v; prev = prev->next)
+        ;
     prev->next = v->next;
-    v->next = listOfVertices_HEAD;
-    listOfVertices_HEAD = v;
+    v->next = listOfVertices;
+    listOfVertices = v;
 }
 
 vertex_t newVertex()
@@ -116,39 +108,40 @@ void Preflow()
 
     total = numSuppliers + numStations * 2 + 2;
 
-    graph = mallocAndVerify(sizeof(struct vertex) * total);
+    graph = mallocAndVerify(sizeof(vertex_t) * total);
 
     graph[0] = newVertex(); /* Source */
     graph[0]->height = total;
+    addVertextToList(graph[0]);
 
     graph[1] = newVertex(); /* Supermarket*/
+    addVertextToList(graph[1]);
 
     for (i = 2; i < (numSuppliers + 2); i++) /* Suppliers */
     {
         graph[i] = newVertex();
-        addVertextToList(graph[i]);
+
         scanfAndVerify(&maxCapacityTmp);
 
         graph[i]->excess = maxCapacityTmp;
         graph[0]->excess -= maxCapacityTmp;
 
-        addtoList(&graph[0]->edgeList, 0, i, maxCapacityTmp);
-        graph[0]->edgeList->flow = maxCapacityTmp;
-        addtoList(&graph[i]->edgeList, i, 0, 0);
-        graph[i]->edgeList->flow = -maxCapacityTmp;
-
+        addtoList(&graph[0]->edgeList, 0, i, 0);
+        addtoList(&graph[i]->edgeList, i, 0, maxCapacityTmp);
+        addVertextToList(graph[i]);
     }
 
     for (j = i; j < (numSuppliers + numStations + 2); j++) /* Stations */
     {
         graph[j] = newVertex();
-        addVertextToList(graph[j]);
         graph[j + numStations] = newVertex();
-        addVertextToList(graph[j + numStations]);
 
         scanfAndVerify(&maxCapacityTmp);
         addtoList(&graph[j]->edgeList, j, j + numStations, maxCapacityTmp);
         addtoList(&graph[j + numStations]->edgeList, j + numStations, j, 0);
+
+        addVertextToList(graph[j]);
+        addVertextToList(graph[j + numStations]);
     }
 
     for (i = 1; i <= numConnections; i++) /*Connections*/
@@ -162,6 +155,7 @@ void Preflow()
             addtoList(&graph[srcTmp]->edgeList, srcTmp, destTmp, pathCapTmp);
             addtoList(&graph[destTmp]->edgeList, destTmp, srcTmp, 0);
         }
+
         else
         {
             addtoList(&graph[srcTmp + numStations]->edgeList, srcTmp + numStations, destTmp, pathCapTmp);
@@ -218,8 +212,14 @@ void Discharge(vertex_t u)
     edge_t uv;
     vertex_t v;
 
-    while (u->excess > 0 && edgeToNeighbor != NULL)
+    while (u->excess > 0)
     {
+        if (edgeToNeighbor == NULL)
+        {
+            Relabel(u);
+            edgeToNeighbor = u->edgeList; /*edge to first neighbor*/
+        }
+
         v = graph[edgeToNeighbor->dest]; /*neighbor*/
 
         for (uv = u->edgeList; uv != NULL; uv = uv->next)
@@ -228,26 +228,20 @@ void Discharge(vertex_t u)
                 break;                           /*uv edge exists and uv = uv edge*/
         }
 
-        if (v == NULL)
-        {
-            Relabel(u);
-            edgeToNeighbor = u->edgeList; /*edge to first neighbor*/
-        }
-        else if (uv != 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
+        if (uv != 0 && u->height == (v->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
             Push(u, v);
-        else 
+        else
             edgeToNeighbor = edgeToNeighbor->next; /*edge to next neighbor*/
     }
 }
 
-
 void RelabelToFront()
 {
-    vertex_t u = listOfVertices_HEAD;
+    vertex_t u = listOfVertices;
     int oldh = 0;
-    
+
     Preflow();
-    
+
     while (u != NULL)
     {
         oldh = u->height;
@@ -256,7 +250,6 @@ void RelabelToFront()
             vertexAtBeginning(u);
         /* nao sei o que meter aqui */
     }
-    
 }
 
 void printGraph()
@@ -278,8 +271,21 @@ void printGraph()
            numSuppliers, numStations, numConnections);
 }
 
+void printListOfVertices()
+{
+    vertex_t x;
+    for (x = listOfVertices; x->next != NULL; x = x->next)
+    {
+        printf(" %d ->", x->edgeList->source);
+    }
+    printf(" %d\n", x->edgeList->source);
+}
+
 int main()
 {
     Preflow();
+    printGraph();
+    Discharge(graph[2]);
+    printGraph();
     return EXIT_SUCCESS;
 }
