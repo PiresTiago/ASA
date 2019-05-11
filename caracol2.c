@@ -131,6 +131,7 @@ vertex_t newVertex()
 
     vertex->height = 0;
     vertex->excess = 0;
+    vertex->srcEdgeList = NULL;
     vertex->dstEdgeList = NULL;
     vertex->next = NULL;
     vertex->visited = false;
@@ -163,7 +164,6 @@ void Preflow()
 
         graph[i]->excess = capacityTmp;
         graph[0]->excess -= capacityTmp;
-
         addToSrcList(&graph[0]->srcEdgeList, 0, i, capacityTmp, capacityTmp, -capacityTmp, 0);
         addToDstList(&graph[i]->dstEdgeList, graph[0]->srcEdgeList);
         pushQueue(graph[i]);
@@ -291,7 +291,7 @@ void Discharge(vertex_t u)
 {
     edge_t edgeToNeighborSrc = u->srcEdgeList; /*edge to first neighbor*/
     edge_t edgeToNeighborDst = u->dstEdgeList; /*edge to first neighbor*/
-    vertex_t v1, v2;
+    vertex_t v1=NULL, v2=NULL;
 
     while (u->excess > 0)
     {
@@ -366,16 +366,16 @@ void minimumCut()
 
     printf("%d\n", graph[1]->excess);
 
-    for (i = 0; i < numSuppliers + numStations * 2 + 2; i++)
+    for (i = numSuppliers + 2; i < numSuppliers + 2 + numStations; i++)
     {
         for (edge = graph[i]->srcEdgeList; edge != NULL; edge = edge->nextSrc)
         {
+            /*printf("SRC:%d DST:%d\n",edge->source,edge->destination);*/
             if ((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
                 (!graph[edge->source]->visited && graph[edge->destination]->visited))
             {
-
-                /*printf("SRC:%d DST:%d\n",edge->source,edge->destination); */
-                if (edge->source >= numSuppliers + 2 && edge->source + numStations == edge->destination)
+                if (edge->source < edge->destination &&
+                    edge->source + numStations == edge->destination)
                 {
                     if (firstChar)
                     {
@@ -387,53 +387,56 @@ void minimumCut()
                 }
             }
         }
-        printf("\n");
-        for (i = 0; i < numSuppliers + numStations * 2 + 2; i++)
+    }
+    printf("\n");
+    for (i = 0; i < numSuppliers + 2; i++)
+    {
+        for (edge = graph[i]->srcEdgeList; edge != NULL; edge = edge->nextSrc)
         {
-            for (edge = graph[i]->srcEdgeList; edge != NULL; edge = edge->nextSrc)
+
+            if ((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
+                (!graph[edge->source]->visited && graph[edge->destination]->visited))
             {
-                if ((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
-                    (!graph[edge->source]->visited && graph[edge->destination]->visited))
-                {
-                    if (edge->source != 0 && edge->destination != 0 &&
-                        edge->source != edge->destination - numStations)
-
-                    {
-                        if (edge->source >= numStations + 2 + numSuppliers)
-                            printf("%d %d\n", edge->source - numStations, edge->destination);
-
-                        else if (edge->destination >= numStations + 2 + numSuppliers)
-                            printf("%d %d\n", edge->source, edge->destination - numStations);
-
-                        else
-                            printf("%d %d\n", edge->source, edge->destination);
-                    }
-                }
+                if (edge->source != 0 && edge->destination != 0)
+                    printf("%d %d\n", edge->source, edge->destination);
             }
         }
     }
-
-    void PushRelabel()
+    for (i = numSuppliers + 2 + numStations; i < numSuppliers + numStations * 2 + 2; i++)
     {
-        Preflow();
-
-        while (verticesQueueFront != NULL)
+        for (edge = graph[i]->srcEdgeList; edge != NULL; edge = edge->nextSrc)
         {
-            Discharge(verticesQueueFront);
-            popQueue();
+            if ((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
+                (!graph[edge->source]->visited && graph[edge->destination]->visited))
+            {
+                if (edge->source != 0 && edge->destination != 0)
+                    printf("%d %d\n", edge->source - numStations, edge->destination);
+            }
         }
     }
+}
 
-    int main()
+void PushRelabel()
+{
+    Preflow();
+
+    while (verticesQueueFront != NULL)
     {
-        PushRelabel();
-        /*BFS();*/
-        DFSVisit(graph[1]);
-        /*for (i = 0; i < numStations * 2 + numSuppliers + 2; i++)
+        Discharge(verticesQueueFront);
+        popQueue();
+    }
+}
+
+int main()
+{
+    PushRelabel();
+    /*BFS();*/
+    DFSVisit(graph[1]);
+    /*for (i = 0; i < numStations * 2 + numSuppliers + 2; i++)
     {
         printf("%d\n", graph[i]->visited);
     }*/
-        minimumCut();
+    minimumCut();
 
-        return EXIT_SUCCESS;
-    }
+    return EXIT_SUCCESS;
+}
