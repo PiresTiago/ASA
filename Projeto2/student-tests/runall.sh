@@ -8,10 +8,10 @@ bold=`tput bold `
 
 
 
-for ((i=1;i<=6;i++))
+for ((i=1;i<=9;i++))
 	do
 		
-		time ./caracol <T0$i.in >T0$i.out.me
+		time ./caracol2 <T0$i.in >T0$i.out.me
 		if diff T0$i.out T0$i.out.me >/dev/null ; then
   			echo ${bold}TEST $i${reset} "--" ${green}OK
 		else
