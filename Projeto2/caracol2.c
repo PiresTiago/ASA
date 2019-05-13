@@ -3,7 +3,6 @@
 #include <stdbool.h>
 
 #define min(x, y) (x < y ? x : y)
-#define max(x, y) (x > y ? x : y)
 
 int numSuppliers, numStations, numConnections;
 
@@ -27,6 +26,7 @@ typedef struct vertex
 /*<<<<<<<>>>>>>>>
   < GLOBAL VARS >
   <<<<<<<>>>>>>>>*/
+
 vertex_t *graph = NULL;
 
 vertex_t verticesQueueFront = NULL;
@@ -50,9 +50,48 @@ void scanfAndVerify(int *number)
 
     if (error < 0)
     {
-        printf("Error in scanf, exiting...%d\n", error);
+        printf("Error in scanf, exiting...\n");
         exit(EXIT_FAILURE);
     }
+}
+
+void pushQueue(vertex_t v)
+{
+    if (verticesQueueRear == NULL)
+    {
+        verticesQueueFront = verticesQueueRear = v;
+    }
+    else
+    {
+        verticesQueueRear->next = v;
+        verticesQueueRear = v;
+    }
+}
+
+void popQueue()
+{
+    if (verticesQueueFront != NULL)
+    {
+        vertex_t x = verticesQueueFront;
+        verticesQueueFront = verticesQueueFront->next;
+        x->next = NULL;
+
+        if (verticesQueueFront == NULL)
+            verticesQueueRear = NULL;
+    }
+}
+
+vertex_t newVertex()
+{
+    vertex_t vertex = mallocAndVerify(sizeof(struct vertex));
+
+    vertex->height = 0;
+    vertex->excess = 0;
+    vertex->srcEdgeList = NULL;
+    vertex->dstEdgeList = NULL;
+    vertex->next = NULL;
+    vertex->visited = false;
+    return vertex;
 }
 
 edge_t newEdge(int src, int dest, int flowForward, int capForward, int flowBackward, int capBackward)
@@ -73,10 +112,10 @@ edge_t newEdge(int src, int dest, int flowForward, int capForward, int flowBackw
     return x;
 }
 
+/*Add vertex to sorted list*/
 void addToSrcList(edge_t *head, int src, int dest, int flowForward, int capForward, int flowBackward, int capBackward)
 {
     edge_t x = newEdge(src, dest, flowForward, capForward, flowBackward, capBackward);
-
     int d = x->destination;
 
     if (*head == NULL)
@@ -119,55 +158,6 @@ void addToDstList(edge_t *head, edge_t x, int destination)
     }
 }
 
-void printVerticesQueue()
-{
-    vertex_t x;
-    for (x = verticesQueueFront; x->next != NULL; x = x->next)
-    {
-        printf(" %d ->", x->srcEdgeList->source);
-    }
-    printf(" %d\n", x->srcEdgeList->source);
-}
-
-void pushQueue(vertex_t v)
-{
-    if (verticesQueueRear == NULL)
-    {
-        verticesQueueFront = verticesQueueRear = v;
-    }
-    else
-    {
-        verticesQueueRear->next = v;
-        verticesQueueRear = v;
-    }
-}
-
-void popQueue()
-{
-    if (verticesQueueFront != NULL)
-    {
-        vertex_t x = verticesQueueFront;
-        verticesQueueFront = verticesQueueFront->next;
-        x->next = NULL;
-
-        if (verticesQueueFront == NULL)
-            verticesQueueRear = NULL;
-    }
-}
-
-vertex_t newVertex()
-{
-    vertex_t vertex = mallocAndVerify(sizeof(struct vertex));
-
-    vertex->height = 0;
-    vertex->excess = 0;
-    vertex->srcEdgeList = NULL;
-    vertex->dstEdgeList = NULL;
-    vertex->next = NULL;
-    vertex->visited = false;
-    return vertex;
-}
-
 void Preflow()
 {
     int i = 0, j = 0, srcTmp = 0, destTmp = 0, pathCapTmp = 0;
@@ -197,6 +187,7 @@ void Preflow()
         addToDstList(&graph[i]->dstEdgeList, graph[0]->srcEdgeList, i);
         pushQueue(graph[i]);
     }
+
     for (j = i; j < (numSuppliers + numStations + 2); j++) /* Stations */
     {
         graph[j] = newVertex();
@@ -225,20 +216,6 @@ void Preflow()
             addToDstList(&graph[destTmp]->dstEdgeList, graph[srcTmp]->srcEdgeList, destTmp);
         }
     }
-
-   /* for (i = 0; i < numStations + numSuppliers * 2 + 2; i++)
-    {
-        if (graph[i]->dstEdgeList != NULL)
-        {
-            printf("SRC:%d\n", graph[i]->dstEdgeList->destination);
-            for (edge = graph[i]->dstEdgeList; edge != NULL; edge = edge->nextDst)
-            {
-                printf("    %d,%d->", edge->source, edge->capacityForward);
-            }
-            printf("\n\n");
-        }
-    }
-    exit(0);*/
 }
 
 void Push(vertex_t u, vertex_t v, bool uIsSource)
@@ -304,29 +281,8 @@ void Relabel(vertex_t u)
                 minHeight = min(graph[edge->source]->height, minHeight);
         }
     }
-    if (minHeight != -1) /*RETIRAR ISTO */
+    if (minHeight != -1)
         u->height = 1 + minHeight;
-}
-void printGraph()
-{
-    int i;
-    edge_t j;
-
-    for (i = (numSuppliers + numStations * 2 + 1); i >= 0; i--)
-    {
-        printf("ID: %d | h:%d | e:%d \n",
-               i, graph[i]->height, graph[i]->excess);
-        for (j = graph[i]->srcEdgeList; j != NULL; j = j->nextSrc)
-        {
-            printf("    DST:%d  CAPF:%d\n", j->destination, j->capacityForward - j->flowForward);
-        }
-        for (j = graph[i]->dstEdgeList; j != NULL; j = j->nextDst)
-        {
-            printf("    DST:%d  CAPF:%d\n", j->source, j->capacityBackward - j->flowBackward);
-        }
-    }
-    printf("\n\nNum de Fornecedores:%d\nNum de Estações:%d\nNum de ligacoes:%d\n\n",
-           numSuppliers, numStations, numConnections);
 }
 
 void Discharge(vertex_t u)
@@ -340,7 +296,6 @@ void Discharge(vertex_t u)
 
         if (edgeToNeighborSrc == NULL && edgeToNeighborDst == NULL)
         {
-
             Relabel(u);
             edgeToNeighborSrc = u->srcEdgeList; /*edge to first neighbor*/
             edgeToNeighborDst = u->dstEdgeList; /*edge to first neighbor*/
@@ -352,33 +307,18 @@ void Discharge(vertex_t u)
             if (edgeToNeighborDst != NULL)
                 v2 = graph[edgeToNeighborDst->source]; /*neighbor*/
 
-            /*printf("ALTURA U:%d EXCESSO U:%d\n", u->height, u->excess);
-            printf("ALTURA V:%d EXCESSO V:%d\n", v1->height, v1->excess);
-            printf("SRC:%d  DST:%d\n", u->edgeDest->source, edgeToNeighbor->destination);                   
-            printf("FLOW AVAILABLE:%d\n\n", edgeToNeighbor->capacity-edgeToNeighbor->flow);
-            printf("");*/
-
             if (edgeToNeighborSrc != NULL && edgeToNeighborSrc->capacityForward - edgeToNeighborSrc->flowForward > 0 &&
-                u->height == (v1->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
-            {
-
-                /* printf("OI\n");*/
+                u->height == (v1->height + 1))
                 Push(u, v1, true);
-            }
-            else if (edgeToNeighborDst != NULL && edgeToNeighborDst->capacityBackward - edgeToNeighborDst->flowBackward > 0 &&
-                     u->height == (v2->height + 1)) /*(uv!=0) == (cf(u,v)>0)*/
-            {
 
-                /* printf("OI\n");*/
+            else if (edgeToNeighborDst != NULL && edgeToNeighborDst->capacityBackward - edgeToNeighborDst->flowBackward > 0 &&
+                     u->height == (v2->height + 1))
                 Push(u, v2, false);
-            }
+
             else
             {
-
                 if (edgeToNeighborDst != NULL)
-                {
                     edgeToNeighborDst = edgeToNeighborDst->nextDst; /*edge to next neighbor*/
-                }
                 if (edgeToNeighborSrc != NULL)
                     edgeToNeighborSrc = edgeToNeighborSrc->nextSrc; /*edge to next neighbor*/
             }
@@ -393,17 +333,13 @@ void DFSVisit(vertex_t u)
     {
         if (!graph[edge->destination]->visited &&
             edge->capacityBackward - edge->flowBackward != 0)
-        {
             DFSVisit(graph[edge->destination]);
-        }
     }
     for (edge = u->dstEdgeList; edge != NULL; edge = edge->nextDst)
     {
         if (!graph[edge->source]->visited &&
             edge->capacityForward - edge->flowForward != 0)
-        {
             DFSVisit(graph[edge->source]);
-        }
     }
 }
 
@@ -419,21 +355,17 @@ void minimumCut()
     {
         for (edge = graph[i]->srcEdgeList; edge != NULL; edge = edge->nextSrc)
         {
-            /*printf("SRC:%d DST:%d\n",edge->source,edge->destination);*/
-            if ((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
-                (!graph[edge->source]->visited && graph[edge->destination]->visited))
+            if (((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
+                 (!graph[edge->source]->visited && graph[edge->destination]->visited)) &&
+                edge->source < edge->destination && edge->source + numStations == edge->destination)
             {
-                if (edge->source < edge->destination &&
-                    edge->source + numStations == edge->destination)
+                if (firstChar)
                 {
-                    if (firstChar)
-                    {
-                        printf("%d", edge->source);
-                        firstChar = false;
-                    }
-                    else
-                        printf(" %d", edge->source);
+                    printf("%d", edge->source);
+                    firstChar = false;
                 }
+                else
+                    printf(" %d", edge->source);
             }
         }
     }
@@ -442,25 +374,21 @@ void minimumCut()
     {
         for (edge = graph[i]->srcEdgeList; edge != NULL; edge = edge->nextSrc)
         {
-
-            if ((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
-                (!graph[edge->source]->visited && graph[edge->destination]->visited))
-            {
-                if (edge->source != 0 && edge->destination != 0)
-                    printf("%d %d\n", edge->source, edge->destination);
-            }
+            if (((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
+                 (!graph[edge->source]->visited && graph[edge->destination]->visited)) &&
+                edge->source != 0 && edge->destination != 0)
+                printf("%d %d\n", edge->source, edge->destination);
         }
     }
+
     for (i = numSuppliers + 2 + numStations; i < numSuppliers + numStations * 2 + 2; i++)
     {
         for (edge = graph[i]->srcEdgeList; edge != NULL; edge = edge->nextSrc)
         {
-            if ((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
-                (!graph[edge->source]->visited && graph[edge->destination]->visited))
-            {
-                if (edge->source != 0 && edge->destination != 0)
-                    printf("%d %d\n", edge->source - numStations, edge->destination);
-            }
+            if (((graph[edge->source]->visited && !graph[edge->destination]->visited) ||
+                 (!graph[edge->source]->visited && graph[edge->destination]->visited)) &&
+                edge->source != 0 && edge->destination != 0 && edge->capacityForward - edge->flowForward == 0)
+                printf("%d %d\n", edge->source - numStations, edge->destination);
         }
     }
 }
@@ -468,7 +396,6 @@ void minimumCut()
 void PushRelabel()
 {
     Preflow();
-
     while (verticesQueueFront != NULL)
     {
         Discharge(verticesQueueFront);
@@ -476,16 +403,27 @@ void PushRelabel()
     }
 }
 
+void freeAllMemory()
+{
+    int i = 0;
+    edge_t edge, next;
+    for (i = 0; i < numSuppliers + 2 + numStations * 2; i++)
+    {
+        for (edge = graph[i]->srcEdgeList; edge != NULL; edge = next)
+        {
+            next = edge->nextSrc;
+            free(edge);
+        }
+        free(graph[i]);
+    }
+    free(graph);
+}
+
 int main()
 {
     PushRelabel();
-    /*BFS();*/
     DFSVisit(graph[1]);
-    /*for (i = 0; i < numStations * 2 + numSuppliers + 2; i++)
-    {
-        printf("%d\n", graph[i]->visited);
-    }*/
     minimumCut();
-
+    freeAllMemory();
     return EXIT_SUCCESS;
 }
